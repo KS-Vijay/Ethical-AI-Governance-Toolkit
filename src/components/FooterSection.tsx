@@ -5,7 +5,7 @@ const FooterSection = () => (
     <div className="flex flex-col md:flex-row items-center justify-between max-w-6xl mx-auto gap-6 md:gap-0">
       <div className="flex items-center gap-4 text-sm">
         <a
-          href="https://github.com/your-repo/ethical-ai-governance-toolkit"
+          href="https://github.com/KS-Vijay/Ethical-AI-Governance-Toolkit"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-blue-300 hover:text-white hover:underline transition duration-200"
@@ -21,7 +21,7 @@ const FooterSection = () => (
         </a>
       </div>
       <div className="text-xs text-gray-400 text-center md:text-right leading-relaxed">
-        © {new Date().getFullYear()} <span className="text-white font-medium">Ethical AI Governance Toolkit</span> &mdash; Demo Only.
+        © {new Date().getFullYear()} <span className="text-white font-medium">FAIRSIGHT</span> &mdash; Demo Only.
         <br className="md:hidden" />
         Not legal advice. Use responsibly.
       </div>

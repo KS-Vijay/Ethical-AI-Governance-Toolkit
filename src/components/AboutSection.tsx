@@ -12,10 +12,10 @@ const AboutSection = () => (
         🚀 About the Team
       </h2>
       <p className="text-sm text-blue-300 mb-3 leading-relaxed">
-        Created by <strong className="text-white">Team EAGT</strong> — a group of engineers, designers, and ethicists building tools for transparent, responsible AI.
+        Created by <strong className="text-white">Team Runtime Terror</strong> — a group of engineers, designers, and ethicists building tools for transparent, responsible AI.
       </p>
       <p className="text-sm text-blue-400 italic">
-        Built during the <span className="text-white font-medium">“AI for Good” Hackathon 2024</span>.
+        Built during the <span className="text-white font-medium">“Hackfest by SAP” Hackathon 2025</span>.
       </p>
     </motion.div>
   </section>

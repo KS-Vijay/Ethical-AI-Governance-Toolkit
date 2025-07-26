@@ -11,7 +11,19 @@ const HeroSection = () => (
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: "easeOut" }}
-        className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight drop-shadow-lg"
+        className="text-5xl md:text-7xl font-extrabold mb-6 bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent"
+        style={{ letterSpacing: "-0.03em" }}
+      >
+        FAIR
+        <span className="text-white font-extrabold mb-6 tracking-tight drop-shadow-lg">
+          SIGHT
+        </span>
+      </motion.h1>
+      <motion.h1
+        initial={{ opacity: 0, y: 60 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
+        className="text-2xl md:text-4xl font-extrabold mb-6 tracking-tight drop-shadow-lg"
         style={{ letterSpacing: "-0.03em" }}
       >
         Ethics,{" "}
