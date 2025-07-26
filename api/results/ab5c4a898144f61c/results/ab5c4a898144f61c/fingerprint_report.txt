@@ -1,0 +1,17 @@
+================================================================================
+DATASET FINGERPRINT REPORT
+================================================================================
+Dataset: synthetic_complaints.csv
+Generated: 2025-06-17T23:31:36.708020
+SHA-256 Hash: b07a236b2354828e7bd552c0ce0bfa075b84401b7cc0367e5d8f10d6f2523062
+File Size: 16.82 MB
+Dimensions: 30,000 rows × 4 columns
+Data Quality: 0.00% null values
+Duplicates: 37.52% of rows
+
+Column Summary:
+  category: object (6 unique)
+  intent: object (3 unique)
+  complaint: object (18409 unique)
+  response: object (17641 unique)
+================================================================================

@@ -1,0 +1,47 @@
+================================================================================
+COMPREHENSIVE ETHICAL AI GOVERNANCE REPORT
+================================================================================
+Model: synthetic_complaints.csv
+Generated: 2025-07-26T16:06:54.709436
+Session ID: 784e57b78793be40
+
+BIAS ANALYSIS SUMMARY
+----------------------------------------
+Bias analysis completed with visualizations generated.
+Generated 1 visualization(s):
+  • bias_analysis_report.png
+
+BIAS SCORE ANALYSIS
+----------------------------------------
+Overall Bias Score: 80/100
+Bias Level: LOW
+
+Detailed Reasoning:
+  Class Imbalance: -20.0 points
+    • Class imbalance can lead to biased model predictions
+    • Severe imbalances detected:
+      - complaint: minority class = 0.0%
+      - response: minority class = 0.0%
+
+Penalty Breakdown:
+  • Class Imbalance: -20.0 points
+
+Dataset Summary:
+  • Shape: [30000, 4]
+  • Missing Values: 0.00%
+  • Duplicate Rows: 11257
+  • Protected Attributes: intent, category
+
+CONCLUSIONS AND RECOMMENDATIONS
+----------------------------------------
+Overall Compliance Status: UNKNOWN
+
+Next Steps:
+  1. Review all identified issues and recommendations
+  2. Implement suggested improvements
+  3. Conduct regular audits and monitoring
+  4. Document all governance processes
+
+================================================================================
+END OF REPORT
+================================================================================

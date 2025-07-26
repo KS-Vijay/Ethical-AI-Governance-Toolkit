@@ -1,0 +1,57 @@
+
+        <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+            <!-- Background -->
+            <rect width="400" height="300" fill="white" stroke="#B71C1C" stroke-width="8"/>
+            
+            <!-- Header -->
+            <rect x="8" y="8" width="384" height="72" fill="#DC143C"/>
+            
+            <!-- Title -->
+            <text x="200" y="35" text-anchor="middle" fill="#FFFFFF" 
+                  font-family="Arial, sans-serif" font-size="24" font-weight="bold">
+                ETHICAL AI BADGE
+            </text>
+            
+            <!-- Badge Level -->
+            <text x="200" y="60" text-anchor="middle" fill="#FFFFFF" 
+                  font-family="Arial, sans-serif" font-size="16">
+                INSUFFICIENT
+            </text>
+            
+            <!-- Score Circle -->
+            <circle cx="200" cy="140" r="40" fill="#DC143C" 
+                    stroke="#B71C1C" stroke-width="3"/>
+            
+            <!-- Score Text -->
+            <text x="200" y="155" text-anchor="middle" fill="#FFFFFF" 
+                  font-family="Arial, sans-serif" font-size="48" font-weight="bold">
+                52
+            </text>
+            
+            <!-- Model Name -->
+            <text x="200" y="210" text-anchor="middle" fill="black" 
+                  font-family="Arial, sans-serif" font-size="16">
+                Model: synthetic_complaints.csv
+            </text>
+        
+                <text x="20" y="240" fill="black" 
+                      font-family="Arial, sans-serif" font-size="12">
+                    Bias & Fairness: 100
+                </text>
+                
+                <text x="20" y="255" fill="black" 
+                      font-family="Arial, sans-serif" font-size="12">
+                    Transparency: 0
+                </text>
+                
+                <text x="20" y="270" fill="black" 
+                      font-family="Arial, sans-serif" font-size="12">
+                    Privacy Protection: 94
+                </text>
+                
+            <text x="20" y="285" fill="gray" 
+                  font-family="Arial, sans-serif" font-size="12">
+                Generated: 2025-06-17
+            </text>
+        </svg>
+        

@@ -1,0 +1,32 @@
+{
+  "model_name": "synthetic_complaints.csv",
+  "overall_score": 53,
+  "badge_level": "insufficient",
+  "passes_threshold": false,
+  "threshold": 70,
+  "category_scores": {
+    "bias_fairness": 42,
+    "transparency": 25,
+    "privacy": 50,
+    "accountability": 50,
+    "robustness": 50,
+    "human_oversight": 58.333333333333336
+  },
+  "badge_config": {
+    "color": "#DC143C",
+    "text_color": "#FFFFFF",
+    "border_color": "#B71C1C",
+    "label": "INSUFFICIENT",
+    "min_score": 0
+  },
+  "generated_at": "2025-07-26T16:06:54.632506",
+  "recommendations": [
+    "Overall ethical compliance needs significant improvement",
+    "Critical improvement needed in Bias & Fairness",
+    "Critical improvement needed in Transparency",
+    "Consider enhancing Privacy Protection measures",
+    "Consider enhancing Accountability measures",
+    "Consider enhancing Robustness measures",
+    "Consider enhancing Human Oversight measures"
+  ]
+}

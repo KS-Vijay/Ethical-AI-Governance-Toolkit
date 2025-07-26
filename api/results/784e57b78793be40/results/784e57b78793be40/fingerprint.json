@@ -1,0 +1,105 @@
+{
+  "file_info": {
+    "filename": "synthetic_complaints.csv",
+    "file_path": "C:\\Users\\hp\\Downloads\\Ethical-AI-Governance-Toolkit-main(working)\\api\\uploads\\784e57b78793be40\\synthetic_complaints.csv",
+    "file_size_bytes": 17633911,
+    "file_size_mb": 16.82,
+    "file_extension": ".csv",
+    "creation_time": "2025-07-26T16:04:38.225130",
+    "modification_time": "2025-07-26T16:04:38.510866"
+  },
+  "fingerprint_info": {
+    "generated_at": "2025-07-26T16:06:44.630540",
+    "generator_version": "1.0.0",
+    "file_hash_sha256": "b07a236b2354828e7bd552c0ce0bfa075b84401b7cc0367e5d8f10d6f2523062",
+    "content_hash_sha256": "4cabf4e9780decfd754efce9a1ed020e9616ea984b218f27b28752e3a17d8150"
+  },
+  "schema": {
+    "columns": {
+      "category": {
+        "dtype": "object",
+        "non_null_count": 30000,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 6,
+        "unique_percentage": 0.02,
+        "top_values": {
+          "employee": 5096,
+          "vendor": 5085,
+          "product": 5015,
+          "legal": 4977,
+          "payment": 4925
+        },
+        "avg_length": 6.3417666666666666,
+        "max_length": 8
+      },
+      "intent": {
+        "dtype": "object",
+        "non_null_count": 30000,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 3,
+        "unique_percentage": 0.01,
+        "top_values": {
+          "fraud": 10158,
+          "positive": 9967,
+          "negative": 9875
+        },
+        "avg_length": 6.9842,
+        "max_length": 8
+      },
+      "complaint": {
+        "dtype": "object",
+        "non_null_count": 30000,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 18409,
+        "unique_percentage": 61.36333333333334,
+        "top_values": {
+          "The legal framework you've established for handling refund policy issues shows thoughtful consideration of both user rights and business necessities. It strikes a good balance that many companies miss.": 87,
+          "I've been receiving emails claiming to offer exclusive reporting system access, but they're asking for unusual information and the email addresses don't match your official domain. I think someone might be impersonating your company.": 85,
+          "I've been receiving emails claiming to offer exclusive notification center access, but they're asking for unusual information and the email addresses don't match your official domain. I think someone might be impersonating your company.": 82,
+          "I've been receiving emails claiming to offer exclusive security settings access, but they're asking for unusual information and the email addresses don't match your official domain. I think someone might be impersonating your company.": 80,
+          "There's a website that looks almost identical to yours offering analytics platform at a steep discount, but with slightly different URL and contact information. I believe this is a fraudulent site attempting to scam your customers.": 80
+        },
+        "avg_length": 205.35826666666668,
+        "max_length": 285
+      },
+      "response": {
+        "dtype": "object",
+        "non_null_count": 30000,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 17641,
+        "unique_percentage": 58.80333333333333,
+        "top_values": {
+          "Thank you for alerting us to this potential fraud. We NEVER call customers requesting credit card information to verify purchases. Please do not provide any personal information to these callers. We've logged this incident and would appreciate any details you can share about the call at security@startupgrievance.com.": 855,
+          "You were right to be suspicious. This was NOT a legitimate communication from our legal department. We never demand payments through unconventional methods, and our communications always provide proper documentation and follow professional protocols. This appears to be a scam attempting to use our company name to extract payments. Please forward any details you have about this communication to security@startupgrievance.com for our investigation.": 835,
+          "We sincerely appreciate your positive assessment of our legal framework for refund policy issues. Our legal and product teams worked collaboratively to create policies that protect both our users and our business interests. Feedback from knowledgeable individuals like yourself helps validate our approach. Thank you for taking the time to share your thoughts.": 87,
+          "Thank you for alerting us to these suspicious emails about reporting system access. These are NOT legitimate communications from our company. This appears to be a phishing attempt targeting our customers. Please forward any of these emails to security@startupgrievance.com so we can investigate further and take action. We never request sensitive information through unsolicited emails.": 85,
+          "Thank you for alerting us to these suspicious emails about notification center access. These are NOT legitimate communications from our company. This appears to be a phishing attempt targeting our customers. Please forward any of these emails to security@startupgrievance.com so we can investigate further and take action. We never request sensitive information through unsolicited emails.": 82
+        },
+        "avg_length": 361.557,
+        "max_length": 465
+      }
+    },
+    "summary_stats": {
+      "total_rows": 30000,
+      "total_columns": 4,
+      "memory_usage_mb": 23.124089241027832,
+      "total_cells": 120000,
+      "total_null_cells": 0,
+      "overall_null_percentage": 0.0
+    },
+    "data_quality": {
+      "columns_with_nulls": 0,
+      "columns_all_unique": 0,
+      "columns_single_value": 0,
+      "duplicate_rows": 11257,
+      "duplicate_percentage": 37.52333333333333
+    },
+    "data_type_distribution": {
+      "object": 4
+    }
+  }
+}
