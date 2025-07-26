@@ -23,6 +23,10 @@ matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import seaborn as sns
 from PIL import Image
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Import the classes from the three scripts
 import sys
@@ -38,6 +42,7 @@ try:
     from badge_generator.ethical_badge_generator import EthicalBadgeGenerator
     from cli_toolkit.generate_fingerprint import DatasetFingerprinter
     from cli_toolkit.analyze_bias import BiasAnalyzer
+    from api_verification import api_verification_bp
     print("✅ Successfully imported all modules")
 except ImportError as e:
     print(f"❌ Warning: Could not import modules: {e}")
@@ -48,6 +53,7 @@ except ImportError as e:
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend access
+app.register_blueprint(api_verification_bp)
 
 # Configuration
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size

@@ -1,0 +1,64 @@
+================================================================================
+COMPREHENSIVE ETHICAL AI GOVERNANCE REPORT
+================================================================================
+Model: adult_income.csv
+Generated: 2025-07-27T02:07:55.902540
+Session ID: 1f66b057327c54b9
+
+BIAS ANALYSIS SUMMARY
+----------------------------------------
+Bias analysis completed with visualizations generated.
+Generated 2 visualization(s):
+  • bias_analysis_report.png
+  • correlation_heatmap.png
+
+BIAS SCORE ANALYSIS
+----------------------------------------
+Overall Bias Score: 0/100
+Bias Level: HIGH
+
+Detailed Reasoning:
+  Class Imbalance: -70.0 points
+    • Class imbalance can lead to biased model predictions
+    • Severe imbalances detected:
+      - workclass: minority class = 0.0%
+      - education: minority class = 0.2%
+      - marital-status: minority class = 0.1%
+      - occupation: minority class = 0.0%
+      - relationship: minority class = 3.2%
+      - race: minority class = 0.9%
+      - native-country: minority class = 0.0%
+  Protected Attribute Bias (educational-num): -10 points
+    • Severe distribution bias detected: 0.546
+  Protected Attribute Bias (education): -10 points
+    • Severe distribution bias detected: 0.546
+  Protected Attribute Bias (race): -5 points
+    • Moderate distribution bias detected: 0.281
+  Protected Attribute Bias (native-country): -10 points
+    • Severe distribution bias detected: 0.615
+  Protected Attribute Bias (age): -10 points
+    • Severe distribution bias detected: 0.689
+
+Penalty Breakdown:
+  • Class Imbalance: -70.0 points
+  • Protected Attributes: -45.0 points
+
+Dataset Summary:
+  • Shape: [9768, 15]
+  • Missing Values: 0.00%
+  • Duplicate Rows: 1
+  • Protected Attributes: educational-num, education, race, native-country, relationship, gender, marital-status, income, age, workclass
+
+CONCLUSIONS AND RECOMMENDATIONS
+----------------------------------------
+Overall Compliance Status: UNKNOWN
+
+Next Steps:
+  1. Review all identified issues and recommendations
+  2. Implement suggested improvements
+  3. Conduct regular audits and monitoring
+  4. Document all governance processes
+
+================================================================================
+END OF REPORT
+================================================================================

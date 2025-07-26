@@ -1,0 +1,295 @@
+{
+  "session_id": "1f66b057327c54b9",
+  "timestamp": "2025-07-27T02:07:55.767994",
+  "summary": {
+    "dataset_shape": [
+      9768,
+      15
+    ],
+    "target_column": "workclass",
+    "protected_attributes": [
+      "educational-num",
+      "education",
+      "race",
+      "native-country",
+      "relationship",
+      "gender",
+      "marital-status",
+      "income",
+      "age",
+      "workclass"
+    ],
+    "total_missing_percentage": 0.0,
+    "duplicate_rows": 1,
+    "analysis_timestamp": "2025-07-27T02:07:55.766460",
+    "bias_score": 0,
+    "bias_level": "HIGH",
+    "bias_reasoning": [
+      "Class Imbalance: -70.0 points",
+      "  \u2022 Class imbalance can lead to biased model predictions",
+      "  \u2022 Severe imbalances detected:",
+      "    - workclass: minority class = 0.0%",
+      "    - education: minority class = 0.2%",
+      "    - marital-status: minority class = 0.1%",
+      "    - occupation: minority class = 0.0%",
+      "    - relationship: minority class = 3.2%",
+      "    - race: minority class = 0.9%",
+      "    - native-country: minority class = 0.0%",
+      "Protected Attribute Bias (educational-num): -10 points",
+      "  \u2022 Severe distribution bias detected: 0.546",
+      "Protected Attribute Bias (education): -10 points",
+      "  \u2022 Severe distribution bias detected: 0.546",
+      "Protected Attribute Bias (race): -5 points",
+      "  \u2022 Moderate distribution bias detected: 0.281",
+      "Protected Attribute Bias (native-country): -10 points",
+      "  \u2022 Severe distribution bias detected: 0.615",
+      "Protected Attribute Bias (age): -10 points",
+      "  \u2022 Severe distribution bias detected: 0.689"
+    ],
+    "bias_risk_level": "HIGH",
+    "risk_factors": [
+      "7 severely imbalanced features"
+    ]
+  },
+  "bias_score_analysis": {
+    "bias_score": 0,
+    "bias_level": "HIGH",
+    "reasoning": [
+      "Class Imbalance: -70.0 points",
+      "  \u2022 Class imbalance can lead to biased model predictions",
+      "  \u2022 Severe imbalances detected:",
+      "    - workclass: minority class = 0.0%",
+      "    - education: minority class = 0.2%",
+      "    - marital-status: minority class = 0.1%",
+      "    - occupation: minority class = 0.0%",
+      "    - relationship: minority class = 3.2%",
+      "    - race: minority class = 0.9%",
+      "    - native-country: minority class = 0.0%",
+      "Protected Attribute Bias (educational-num): -10 points",
+      "  \u2022 Severe distribution bias detected: 0.546",
+      "Protected Attribute Bias (education): -10 points",
+      "  \u2022 Severe distribution bias detected: 0.546",
+      "Protected Attribute Bias (race): -5 points",
+      "  \u2022 Moderate distribution bias detected: 0.281",
+      "Protected Attribute Bias (native-country): -10 points",
+      "  \u2022 Severe distribution bias detected: 0.615",
+      "Protected Attribute Bias (age): -10 points",
+      "  \u2022 Severe distribution bias detected: 0.689"
+    ],
+    "penalties": {
+      "missing_values": 0,
+      "class_imbalance": 70,
+      "protected_attributes": 45,
+      "dataset_size": 0
+    }
+  },
+  "basic_statistics": {
+    "age": {
+      "count": 9768.0,
+      "mean": 38.7273751023751,
+      "std": 13.657667923147367,
+      "min": 17.0,
+      "25%": 28.0,
+      "50%": 37.0,
+      "75%": 48.0,
+      "max": 90.0
+    },
+    "fnlwgt": {
+      "count": 9768.0,
+      "mean": 189768.8531941032,
+      "std": 106407.59855858974,
+      "min": 18827.0,
+      "25%": 116934.0,
+      "50%": 178636.0,
+      "75%": 236818.25,
+      "max": 1490400.0
+    },
+    "educational-num": {
+      "count": 9768.0,
+      "mean": 10.083230958230958,
+      "std": 2.568152310445107,
+      "min": 1.0,
+      "25%": 9.0,
+      "50%": 10.0,
+      "75%": 12.0,
+      "max": 16.0
+    },
+    "capital-gain": {
+      "count": 9768.0,
+      "mean": 1101.8678337428337,
+      "std": 7537.381245374661,
+      "min": 0.0,
+      "25%": 0.0,
+      "50%": 0.0,
+      "75%": 0.0,
+      "max": 99999.0
+    },
+    "capital-loss": {
+      "count": 9768.0,
+      "mean": 80.53276003276004,
+      "std": 390.0106337158849,
+      "min": 0.0,
+      "25%": 0.0,
+      "50%": 0.0,
+      "75%": 0.0,
+      "max": 4356.0
+    },
+    "hours-per-week": {
+      "count": 9768.0,
+      "mean": 40.3992628992629,
+      "std": 12.123274164219197,
+      "min": 1.0,
+      "25%": 40.0,
+      "50%": 40.0,
+      "75%": 45.0,
+      "max": 99.0
+    }
+  },
+  "missing_values": {
+    "Missing_Count": {},
+    "Missing_Percentage": {}
+  },
+  "class_imbalance": {
+    "workclass": {
+      "min_class_ratio": 0.00010237510237510238,
+      "max_class_ratio": 0.6944103194103194,
+      "distribution": {
+        "Private": 0.6944103194103194,
+        "Self-emp-not-inc": 0.08200245700245701,
+        "Local-gov": 0.06521294021294022,
+        "?": 0.05477067977067977,
+        "State-gov": 0.04125716625716626,
+        "Self-emp-inc": 0.032555282555282554,
+        "Federal-gov": 0.029381654381654382,
+        "Without-pay": 0.0003071253071253071,
+        "Never-worked": 0.00010237510237510238
+      }
+    },
+    "education": {
+      "min_class_ratio": 0.0015356265356265355,
+      "max_class_ratio": 0.3248361998361998,
+      "distribution": {
+        "HS-grad": 0.3248361998361998,
+        "Some-college": 0.21744471744471744,
+        "Bachelors": 0.16635954135954137,
+        "Masters": 0.05425880425880426,
+        "Assoc-voc": 0.04217854217854218,
+        "11th": 0.03562653562653563,
+        "Assoc-acdm": 0.034295659295659295,
+        "10th": 0.029074529074529076,
+        "7th-8th": 0.02037264537264537,
+        "Prof-school": 0.0171990171990172,
+        "9th": 0.016584766584766583,
+        "12th": 0.014434889434889435,
+        "Doctorate": 0.01167076167076167,
+        "5th-6th": 0.009213759213759214,
+        "1st-4th": 0.004914004914004914,
+        "Preschool": 0.0015356265356265355
+      }
+    },
+    "marital-status": {
+      "min_class_ratio": 0.000819000819000819,
+      "max_class_ratio": 0.45085995085995084,
+      "distribution": {
+        "Married-civ-spouse": 0.45085995085995084,
+        "Never-married": 0.3344594594594595,
+        "Divorced": 0.13667076167076167,
+        "Separated": 0.03265765765765766,
+        "Widowed": 0.03142915642915643,
+        "Married-spouse-absent": 0.013104013104013105,
+        "Married-AF-spouse": 0.000819000819000819
+      }
+    },
+    "occupation": {
+      "min_class_ratio": 0.00020475020475020476,
+      "max_class_ratio": 0.1286855036855037,
+      "distribution": {
+        "Prof-specialty": 0.1286855036855037,
+        "Exec-managerial": 0.12448812448812449,
+        "Craft-repair": 0.12346437346437346,
+        "Adm-clerical": 0.11486486486486487,
+        "Sales": 0.11117936117936118,
+        "Other-service": 0.09899672399672399,
+        "Machine-op-inspct": 0.060810810810810814,
+        "?": 0.054873054873054876,
+        "Transport-moving": 0.04985667485667486,
+        "Handlers-cleaners": 0.041973791973791974,
+        "Tech-support": 0.03409090909090909,
+        "Farming-fishing": 0.033476658476658476,
+        "Protective-serv": 0.018734643734643733,
+        "Priv-house-serv": 0.0042997542997543,
+        "Armed-Forces": 0.00020475020475020476
+      }
+    },
+    "relationship": {
+      "min_class_ratio": 0.03194103194103194,
+      "max_class_ratio": 0.39373464373464373,
+      "distribution": {
+        "Husband": 0.39373464373464373,
+        "Not-in-family": 0.26085176085176087,
+        "Own-child": 0.15612203112203113,
+        "Unmarried": 0.10739148239148238,
+        "Wife": 0.049959049959049956,
+        "Other-relative": 0.03194103194103194
+      }
+    },
+    "race": {
+      "min_class_ratio": 0.008804258804258804,
+      "max_class_ratio": 0.8483824733824734,
+      "distribution": {
+        "White": 0.8483824733824734,
+        "Black": 0.10411547911547911,
+        "Asian-Pac-Islander": 0.02927927927927928,
+        "Amer-Indian-Eskimo": 0.009418509418509418,
+        "Other": 0.008804258804258804
+      }
+    },
+    "native-country": {
+      "min_class_ratio": 0.00020475020475020476,
+      "max_class_ratio": 0.8957821457821458,
+      "distribution": {
+        "United-States": 0.8957821457821458,
+        "Mexico": 0.020167895167895168,
+        "?": 0.019041769041769043,
+        "Germany": 0.0048116298116298115,
+        "Philippines": 0.004709254709254709,
+        "Puerto-Rico": 0.0038902538902538903,
+        "Canada": 0.0038902538902538903,
+        "India": 0.003480753480753481,
+        "Cuba": 0.0031736281736281734,
+        "England": 0.003071253071253071,
+        "Dominican-Republic": 0.002764127764127764,
+        "South": 0.0026617526617526617,
+        "El-Salvador": 0.0025593775593775593,
+        "Japan": 0.00214987714987715,
+        "Italy": 0.0020475020475020475,
+        "Columbia": 0.0020475020475020475,
+        "Guatemala": 0.0019451269451269452,
+        "China": 0.0017403767403767405,
+        "Vietnam": 0.0017403767403767405,
+        "Jamaica": 0.0017403767403767405,
+        "Taiwan": 0.0015356265356265355,
+        "Haiti": 0.0015356265356265355,
+        "Portugal": 0.0014332514332514332,
+        "Poland": 0.0013308763308763308,
+        "Ireland": 0.0010237510237510238,
+        "Ecuador": 0.0010237510237510238,
+        "Peru": 0.0009213759213759214,
+        "Iran": 0.0009213759213759214,
+        "Greece": 0.000819000819000819,
+        "Trinadad&Tobago": 0.0007166257166257166,
+        "Hong": 0.0007166257166257166,
+        "Yugoslavia": 0.0006142506142506142,
+        "Nicaragua": 0.0006142506142506142,
+        "Honduras": 0.0006142506142506142,
+        "France": 0.0005118755118755119,
+        "Outlying-US(Guam-USVI-etc)": 0.0005118755118755119,
+        "Hungary": 0.0004095004095004095,
+        "Laos": 0.0004095004095004095,
+        "Thailand": 0.0004095004095004095,
+        "Scotland": 0.0003071253071253071,
+        "Cambodia": 0.00020475020475020476
+      }
+    }
+  }
+}

@@ -153,24 +153,63 @@ class BiasAnalyzer:
         
         print(f"\n  Statistical Parity Analysis for {protected_attr}:")
         
-        # Calculate positive outcome rates by group
-        groups = self.df.groupby(protected_attr)[self.target_col].agg(['mean', 'count'])
+        # Check if target column is categorical or numeric
+        target_dtype = self.df[self.target_col].dtype
+        is_categorical = target_dtype == 'object' or target_dtype.name == 'category'
         
-        for group_val, row in groups.iterrows():
-            print(f"    {group_val}: {row['mean']:.1%} positive rate (n={row['count']})")
-        
-        # Calculate statistical parity difference
-        rates = groups['mean']
-        max_rate = rates.max()
-        min_rate = rates.min()
-        parity_diff = max_rate - min_rate
-        
-        print(f"    Statistical Parity Difference: {parity_diff:.3f}")
-        
-        if parity_diff > 0.1:  # 10% threshold
-            print("    ⚠️  BIAS DETECTED: Significant difference in positive rates")
+        if is_categorical:
+            # For categorical targets, analyze distribution differences
+            print(f"    Target column '{self.target_col}' is categorical - analyzing distribution differences")
+            
+            # Get value counts for each group
+            group_distributions = {}
+            for group_val in self.df[protected_attr].unique():
+                group_data = self.df[self.df[protected_attr] == group_val]
+                group_distributions[group_val] = group_data[self.target_col].value_counts(normalize=True)
+            
+            # Find the most common category for each group
+            most_common_by_group = {}
+            for group_val, dist in group_distributions.items():
+                most_common = dist.idxmax()
+                most_common_rate = dist.max()
+                most_common_by_group[group_val] = (most_common, most_common_rate)
+                print(f"    {group_val}: {most_common} ({most_common_rate:.1%})")
+            
+            # Calculate distribution difference for the most common category
+            rates = [rate for _, rate in most_common_by_group.values()]
+            max_rate = max(rates)
+            min_rate = min(rates)
+            parity_diff = max_rate - min_rate
+            
+            print(f"    Distribution Difference: {parity_diff:.3f}")
+            
+            if parity_diff > 0.2:  # 20% threshold for categorical data
+                print("    ⚠️  BIAS DETECTED: Significant difference in category distributions")
+            else:
+                print("    ✓ No significant distribution bias detected")
         else:
-            print("    ✓ No significant statistical parity bias detected")
+            # For numeric targets, calculate mean rates
+            try:
+                groups = self.df.groupby(protected_attr)[self.target_col].agg(['mean', 'count'])
+                
+                for group_val, row in groups.iterrows():
+                    print(f"    {group_val}: {row['mean']:.1%} positive rate (n={row['count']})")
+                
+                # Calculate statistical parity difference
+                rates = groups['mean']
+                max_rate = rates.max()
+                min_rate = rates.min()
+                parity_diff = max_rate - min_rate
+                
+                print(f"    Statistical Parity Difference: {parity_diff:.3f}")
+                
+                if parity_diff > 0.1:  # 10% threshold
+                    print("    ⚠️  BIAS DETECTED: Significant difference in positive rates")
+                else:
+                    print("    ✓ No significant statistical parity bias detected")
+            except Exception as e:
+                print(f"    ❌ Error in statistical parity analysis: {str(e)}")
+                print("    Skipping this analysis due to data type incompatibility")
     
     def _check_equalized_odds(self, protected_attr):
         """Check for equalized odds bias (if predictions available)"""
@@ -342,20 +381,54 @@ class BiasAnalyzer:
         if self.protected_attributes and self.target_col:
             for attr in self.protected_attributes:
                 if attr in self.df.columns:
-                    # Check for statistical parity bias
-                    groups = self.df.groupby(attr)[self.target_col].agg(['mean', 'count'])
-                    if len(groups) > 1:
-                        rates = groups['mean']
-                        parity_diff = rates.max() - rates.min()
+                    try:
+                        # Check if target column is categorical or numeric
+                        target_dtype = self.df[self.target_col].dtype
+                        is_categorical = target_dtype == 'object' or target_dtype.name == 'category'
                         
-                        if parity_diff > 0.2:  # Severe bias
-                            protected_penalty += 10
-                            reasoning.append(f"Protected Attribute Bias ({attr}): -10 points")
-                            reasoning.append(f"  • Severe statistical parity bias detected: {parity_diff:.3f}")
-                        elif parity_diff > 0.1:  # Moderate bias
-                            protected_penalty += 5
-                            reasoning.append(f"Protected Attribute Bias ({attr}): -5 points")
-                            reasoning.append(f"  • Moderate statistical parity bias detected: {parity_diff:.3f}")
+                        if is_categorical:
+                            # For categorical targets, analyze distribution differences
+                            group_distributions = {}
+                            for group_val in self.df[attr].unique():
+                                group_data = self.df[self.df[attr] == group_val]
+                                group_distributions[group_val] = group_data[self.target_col].value_counts(normalize=True)
+                            
+                            # Find the most common category for each group
+                            most_common_rates = []
+                            for group_val, dist in group_distributions.items():
+                                most_common_rate = dist.max()
+                                most_common_rates.append(most_common_rate)
+                            
+                            if most_common_rates:
+                                parity_diff = max(most_common_rates) - min(most_common_rates)
+                                
+                                if parity_diff > 0.3:  # Severe bias for categorical
+                                    protected_penalty += 10
+                                    reasoning.append(f"Protected Attribute Bias ({attr}): -10 points")
+                                    reasoning.append(f"  • Severe distribution bias detected: {parity_diff:.3f}")
+                                elif parity_diff > 0.2:  # Moderate bias for categorical
+                                    protected_penalty += 5
+                                    reasoning.append(f"Protected Attribute Bias ({attr}): -5 points")
+                                    reasoning.append(f"  • Moderate distribution bias detected: {parity_diff:.3f}")
+                        else:
+                            # For numeric targets, calculate mean rates
+                            groups = self.df.groupby(attr)[self.target_col].agg(['mean', 'count'])
+                            if len(groups) > 1:
+                                rates = groups['mean']
+                                parity_diff = rates.max() - rates.min()
+                                
+                                if parity_diff > 0.2:  # Severe bias
+                                    protected_penalty += 10
+                                    reasoning.append(f"Protected Attribute Bias ({attr}): -10 points")
+                                    reasoning.append(f"  • Severe statistical parity bias detected: {parity_diff:.3f}")
+                                elif parity_diff > 0.1:  # Moderate bias
+                                    protected_penalty += 5
+                                    reasoning.append(f"Protected Attribute Bias ({attr}): -5 points")
+                                    reasoning.append(f"  • Moderate statistical parity bias detected: {parity_diff:.3f}")
+                    except Exception as e:
+                        # Skip this attribute if analysis fails
+                        reasoning.append(f"Protected Attribute Analysis ({attr}): Skipped due to data type incompatibility")
+                        continue
         
         bias_score -= protected_penalty
         

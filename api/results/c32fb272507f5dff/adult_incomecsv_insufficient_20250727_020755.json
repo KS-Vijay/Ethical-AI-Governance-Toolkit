@@ -1,0 +1,32 @@
+{
+  "model_name": "adult_income.csv",
+  "overall_score": 23,
+  "badge_level": "insufficient",
+  "passes_threshold": false,
+  "threshold": 70,
+  "category_scores": {
+    "bias_fairness": 23,
+    "transparency": 33.33333333333333,
+    "privacy": 37.5,
+    "accountability": 25,
+    "robustness": 25,
+    "human_oversight": 33.33333333333333
+  },
+  "badge_config": {
+    "color": "#DC143C",
+    "text_color": "#FFFFFF",
+    "border_color": "#B71C1C",
+    "label": "INSUFFICIENT",
+    "min_score": 0
+  },
+  "generated_at": "2025-07-27T02:07:55.814653",
+  "recommendations": [
+    "Overall ethical compliance needs significant improvement",
+    "Critical improvement needed in Bias & Fairness",
+    "Critical improvement needed in Transparency",
+    "Critical improvement needed in Privacy Protection",
+    "Critical improvement needed in Accountability",
+    "Critical improvement needed in Robustness",
+    "Critical improvement needed in Human Oversight"
+  ]
+}

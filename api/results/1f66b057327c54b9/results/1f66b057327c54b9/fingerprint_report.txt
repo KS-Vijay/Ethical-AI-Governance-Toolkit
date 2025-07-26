@@ -1,0 +1,28 @@
+================================================================================
+DATASET FINGERPRINT REPORT
+================================================================================
+Dataset: adult_income.csv
+Generated: 2025-07-27T02:07:52.618021
+SHA-256 Hash: d433acb8c0f30e94f2b07564ad1b1208d10a09ac3f682e18145ecbb621b6bd42
+File Size: 1.02 MB
+Dimensions: 9,768 rows × 15 columns
+Data Quality: 0.00% null values
+Duplicates: 0.01% of rows
+
+Column Summary:
+  age: int64 (71 unique)
+  workclass: object (9 unique)
+  fnlwgt: int64 (8308 unique)
+  education: object (16 unique)
+  educational-num: int64 (16 unique)
+  marital-status: object (7 unique)
+  occupation: object (15 unique)
+  relationship: object (6 unique)
+  race: object (5 unique)
+  gender: object (2 unique)
+  capital-gain: int64 (98 unique)
+  capital-loss: int64 (79 unique)
+  hours-per-week: int64 (85 unique)
+  native-country: object (41 unique)
+  income: object (2 unique)
+================================================================================

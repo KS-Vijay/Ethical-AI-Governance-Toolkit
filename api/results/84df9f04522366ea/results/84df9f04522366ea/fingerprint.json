@@ -1,0 +1,277 @@
+{
+  "file_info": {
+    "filename": "adult_income.csv",
+    "file_path": "D:\\Projects\\Ethical-AI-Governance-Toolkit\\api\\uploads\\84df9f04522366ea\\adult_income.csv",
+    "file_size_bytes": 1065257,
+    "file_size_mb": 1.02,
+    "file_extension": ".csv",
+    "creation_time": "2025-07-27T01:59:34.088969",
+    "modification_time": "2025-07-27T01:59:34.094081"
+  },
+  "fingerprint_info": {
+    "generated_at": "2025-07-27T02:00:20.047412",
+    "generator_version": "1.0.0",
+    "file_hash_sha256": "d433acb8c0f30e94f2b07564ad1b1208d10a09ac3f682e18145ecbb621b6bd42",
+    "content_hash_sha256": "bae546aa0d9bcb097f85943fc6741a4af663d407537aa318efb619dea291722c"
+  },
+  "schema": {
+    "columns": {
+      "age": {
+        "dtype": "int64",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 71,
+        "unique_percentage": 0.7268632268632269,
+        "min": 17.0,
+        "max": 90.0,
+        "mean": 38.7273751023751,
+        "median": 37.0,
+        "std": 13.657667923147367,
+        "q25": 28.0,
+        "q75": 48.0
+      },
+      "workclass": {
+        "dtype": "object",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 9,
+        "unique_percentage": 0.09213759213759214,
+        "top_values": {
+          "Private": 6783,
+          "Self-emp-not-inc": 801,
+          "Local-gov": 637,
+          "?": 535,
+          "State-gov": 403
+        },
+        "avg_length": 7.9043816543816545,
+        "max_length": 16
+      },
+      "fnlwgt": {
+        "dtype": "int64",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 8308,
+        "unique_percentage": 85.05323505323506,
+        "min": 18827.0,
+        "max": 1490400.0,
+        "mean": 189768.8531941032,
+        "median": 178636.0,
+        "std": 106407.59855858974,
+        "q25": 116934.0,
+        "q75": 236818.25
+      },
+      "education": {
+        "dtype": "object",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 16,
+        "unique_percentage": 0.16380016380016382,
+        "top_values": {
+          "HS-grad": 3173,
+          "Some-college": 2124,
+          "Bachelors": 1625,
+          "Masters": 530,
+          "Assoc-voc": 412
+        },
+        "avg_length": 8.39864864864865,
+        "max_length": 12
+      },
+      "educational-num": {
+        "dtype": "int64",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 16,
+        "unique_percentage": 0.16380016380016382,
+        "min": 1.0,
+        "max": 16.0,
+        "mean": 10.083230958230958,
+        "median": 10.0,
+        "std": 2.568152310445107,
+        "q25": 9.0,
+        "q75": 12.0
+      },
+      "marital-status": {
+        "dtype": "object",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 7,
+        "unique_percentage": 0.07166257166257166,
+        "top_values": {
+          "Married-civ-spouse": 4404,
+          "Never-married": 3267,
+          "Divorced": 1335,
+          "Separated": 319,
+          "Widowed": 307
+        },
+        "avg_length": 14.359848484848484,
+        "max_length": 21
+      },
+      "occupation": {
+        "dtype": "object",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 15,
+        "unique_percentage": 0.15356265356265356,
+        "top_values": {
+          "Prof-specialty": 1257,
+          "Exec-managerial": 1216,
+          "Craft-repair": 1206,
+          "Adm-clerical": 1122,
+          "Sales": 1086
+        },
+        "avg_length": 12.230855855855856,
+        "max_length": 17
+      },
+      "relationship": {
+        "dtype": "object",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 6,
+        "unique_percentage": 0.06142506142506143,
+        "top_values": {
+          "Husband": 3846,
+          "Not-in-family": 2548,
+          "Own-child": 1525,
+          "Unmarried": 1049,
+          "Wife": 488
+        },
+        "avg_length": 9.165847665847666,
+        "max_length": 14
+      },
+      "race": {
+        "dtype": "object",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 5,
+        "unique_percentage": 0.05118755118755119,
+        "top_values": {
+          "White": 8287,
+          "Black": 1017,
+          "Asian-Pac-Islander": 286,
+          "Amer-Indian-Eskimo": 92,
+          "Other": 86
+        },
+        "avg_length": 5.503071253071253,
+        "max_length": 18
+      },
+      "gender": {
+        "dtype": "object",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 2,
+        "unique_percentage": 0.020475020475020478,
+        "top_values": {
+          "Male": 6510,
+          "Female": 3258
+        },
+        "avg_length": 4.667076167076167,
+        "max_length": 6
+      },
+      "capital-gain": {
+        "dtype": "int64",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 98,
+        "unique_percentage": 1.0032760032760033,
+        "min": 0.0,
+        "max": 99999.0,
+        "mean": 1101.8678337428337,
+        "median": 0.0,
+        "std": 7537.381245374661,
+        "q25": 0.0,
+        "q75": 0.0
+      },
+      "capital-loss": {
+        "dtype": "int64",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 79,
+        "unique_percentage": 0.8087633087633087,
+        "min": 0.0,
+        "max": 4356.0,
+        "mean": 80.53276003276004,
+        "median": 0.0,
+        "std": 390.0106337158849,
+        "q25": 0.0,
+        "q75": 0.0
+      },
+      "hours-per-week": {
+        "dtype": "int64",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 85,
+        "unique_percentage": 0.8701883701883703,
+        "min": 1.0,
+        "max": 99.0,
+        "mean": 40.3992628992629,
+        "median": 40.0,
+        "std": 12.123274164219197,
+        "q25": 40.0,
+        "q75": 45.0
+      },
+      "native-country": {
+        "dtype": "object",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 41,
+        "unique_percentage": 0.41973791973791974,
+        "top_values": {
+          "United-States": 8750,
+          "Mexico": 197,
+          "?": 186,
+          "Germany": 47,
+          "Philippines": 46
+        },
+        "avg_length": 12.289004914004915,
+        "max_length": 26
+      },
+      "income": {
+        "dtype": "object",
+        "non_null_count": 9768,
+        "null_count": 0,
+        "null_percentage": 0.0,
+        "unique_count": 2,
+        "unique_percentage": 0.020475020475020478,
+        "top_values": {
+          "<=50K": 7479,
+          ">50K": 2289
+        },
+        "avg_length": 4.7656633906633905,
+        "max_length": 5
+      }
+    },
+    "summary_stats": {
+      "total_rows": 9768,
+      "total_columns": 15,
+      "memory_usage_mb": 5.964689254760742,
+      "total_cells": 146520,
+      "total_null_cells": 0,
+      "overall_null_percentage": 0.0
+    },
+    "data_quality": {
+      "columns_with_nulls": 0,
+      "columns_all_unique": 0,
+      "columns_single_value": 0,
+      "duplicate_rows": 1,
+      "duplicate_percentage": 0.010237510237510239
+    },
+    "data_type_distribution": {
+      "object": 9,
+      "int64": 6
+    }
+  }
+}

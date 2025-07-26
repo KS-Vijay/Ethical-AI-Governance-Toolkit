@@ -53,11 +53,15 @@ npm i
 #Step 4: Install the Python modules.
 pip install -r requirements.txt
 
-#Step 5: Run the api file
+#Step 5: Set up MongoDB Atlas (Optional but recommended for production)
+# Follow the instructions in MONGODB_SETUP.md to set up MongoDB Atlas
+# Copy env.example to .env and fill in your MongoDB connection string
+
+#Step 6: Run the api file
 cd /api
 python app.py
 
-# Step 6: Start the development server with auto-reloading and an instant preview.
+# Step 7: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 

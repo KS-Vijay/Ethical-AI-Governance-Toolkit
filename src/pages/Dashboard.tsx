@@ -80,7 +80,7 @@ export default function Dashboard() {
         {/* Top Nav - Glassmorphism Effect */}
         <nav className="w-full bg-white/5 backdrop-blur-md shadow-lg shadow-cyan-500/10 py-4 px-8 flex justify-between items-center border-b border-cyan-400/20">
           <h1 className="text-xl font-bold text-cyan-400 drop-shadow-[0_0_5px_rgba(0,255,255,0.4)]">
-            Ethical AI Toolkit
+            FAIRSIGHT
           </h1>
           <div className="space-x-6 flex items-center">
             <button
