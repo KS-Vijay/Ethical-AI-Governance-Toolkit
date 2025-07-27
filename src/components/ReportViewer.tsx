@@ -163,6 +163,42 @@ const ReportViewer: React.FC<ReportViewerProps> = ({
         </Card>
       )}
 
+      {/* Bias Visualizations */}
+      {reportData.biasVisualizations && Object.keys(reportData.biasVisualizations).length > 0 && (
+        <Card className="bg-[#1b263b]/80 border border-purple-500 shadow-lg backdrop-blur-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-purple-400">
+              <FileText className="w-5 h-5" />
+              Bias Analysis Visualizations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {reportData.biasVisualizations['bias_analysis_report.png'] && (
+                <div className="space-y-2">
+                  <h5 className="text-sm font-semibold text-purple-300">Dataset Analysis Overview</h5>
+                  <img 
+                    src={`data:image/png;base64,${reportData.biasVisualizations['bias_analysis_report.png']}`}
+                    alt="Bias Analysis Report"
+                    className="w-full rounded-lg border border-purple-500/30"
+                  />
+                </div>
+              )}
+              {reportData.biasVisualizations['correlation_heatmap.png'] && (
+                <div className="space-y-2">
+                  <h5 className="text-sm font-semibold text-purple-300">Feature Correlation Matrix</h5>
+                  <img 
+                    src={`data:image/png;base64,${reportData.biasVisualizations['correlation_heatmap.png']}`}
+                    alt="Correlation Heatmap"
+                    className="w-full rounded-lg border border-purple-500/30"
+                  />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Dimension Breakdown */}
       <Card className="bg-[#101d35]/80 border border-cyan-700 shadow-lg backdrop-blur-md">
         <CardHeader>

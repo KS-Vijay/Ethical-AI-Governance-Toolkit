@@ -229,6 +229,108 @@ export const generatePDF = async (reportData: ReportData, fileName: string = 'et
     yPosition = margin;
   }
 
+  // Bias Visualizations Section
+  if (reportData.biasVisualizations && Object.keys(reportData.biasVisualizations).length > 0) {
+    pdf.setFontSize(subtitleFontSize);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Bias Analysis Visualizations', margin, yPosition);
+    yPosition += 15;
+
+    // Add bias analysis report image
+    if (reportData.biasVisualizations['bias_analysis_report.png']) {
+      try {
+        // Convert base64 image to PDF
+        const biasImg = new Image();
+        biasImg.src = `data:image/png;base64,${reportData.biasVisualizations['bias_analysis_report.png']}`;
+        
+        // Wait for image to load
+        await new Promise((resolve) => {
+          biasImg.onload = resolve;
+        });
+
+        // Calculate image dimensions to fit on page
+        const maxWidth = contentWidth;
+        const maxHeight = 120;
+        const imgAspectRatio = biasImg.width / biasImg.height;
+        
+        let imgWidth = maxWidth;
+        let imgHeight = imgWidth / imgAspectRatio;
+        
+        if (imgHeight > maxHeight) {
+          imgHeight = maxHeight;
+          imgWidth = imgHeight * imgAspectRatio;
+        }
+
+        // Center the image
+        const imgX = margin + (contentWidth - imgWidth) / 2;
+        
+        // Add image to PDF
+        pdf.addImage(biasImg, 'PNG', imgX, yPosition, imgWidth, imgHeight);
+        yPosition += imgHeight + 10;
+
+        pdf.setFontSize(bodyFontSize);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Dataset Analysis Overview', margin, yPosition);
+        yPosition += 15;
+      } catch (error) {
+        console.error('Error adding bias analysis image to PDF:', error);
+      }
+    }
+
+    // Add correlation heatmap image
+    if (reportData.biasVisualizations['correlation_heatmap.png']) {
+      try {
+        // Check if we need a new page
+        if (yPosition > pageHeight - 150) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+
+        // Convert base64 image to PDF
+        const corrImg = new Image();
+        corrImg.src = `data:image/png;base64,${reportData.biasVisualizations['correlation_heatmap.png']}`;
+        
+        // Wait for image to load
+        await new Promise((resolve) => {
+          corrImg.onload = resolve;
+        });
+
+        // Calculate image dimensions to fit on page
+        const maxWidth = contentWidth;
+        const maxHeight = 120;
+        const imgAspectRatio = corrImg.width / corrImg.height;
+        
+        let imgWidth = maxWidth;
+        let imgHeight = imgWidth / imgAspectRatio;
+        
+        if (imgHeight > maxHeight) {
+          imgHeight = maxHeight;
+          imgWidth = imgHeight * imgAspectRatio;
+        }
+
+        // Center the image
+        const imgX = margin + (contentWidth - imgWidth) / 2;
+        
+        // Add image to PDF
+        pdf.addImage(corrImg, 'PNG', imgX, yPosition, imgWidth, imgHeight);
+        yPosition += imgHeight + 10;
+
+        pdf.setFontSize(bodyFontSize);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Feature Correlation Matrix', margin, yPosition);
+        yPosition += 20;
+      } catch (error) {
+        console.error('Error adding correlation heatmap to PDF:', error);
+      }
+    }
+  }
+
+  // Check if we need a new page
+  if (yPosition > pageHeight - 100) {
+    pdf.addPage();
+    yPosition = margin;
+  }
+
   // Dataset Fingerprint Section
   if (reportData.fingerprint) {
     pdf.setFontSize(subtitleFontSize);

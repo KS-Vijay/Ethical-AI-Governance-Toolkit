@@ -12,6 +12,7 @@ from scipy import stats
 from sklearn.metrics import confusion_matrix, classification_report
 import warnings
 warnings.filterwarnings('ignore')
+import os # Added for os.path.join
 
 class BiasAnalyzer:
     def __init__(self, df, target_col=None, protected_attributes=None):
@@ -257,7 +258,7 @@ class BiasAnalyzer:
                     print(f"    True Positive Rate: {tpr:.3f}")
                     print(f"    False Positive Rate: {fpr:.3f}")
     
-    def create_bias_visualizations(self):
+    def create_bias_visualizations(self, output_dir=None):
         """Create visualizations for bias analysis"""
         print("\n" + "="*60)
         print("GENERATING BIAS VISUALIZATIONS")
@@ -335,8 +336,13 @@ class BiasAnalyzer:
             axes[i].set_visible(False)
         
         plt.tight_layout()
-        plt.savefig('bias_analysis_report.png', dpi=300, bbox_inches='tight')
-        plt.show()
+        
+        # Save bias analysis report
+        bias_report_path = 'bias_analysis_report.png'
+        if output_dir:
+            bias_report_path = os.path.join(output_dir, 'bias_analysis_report.png')
+        plt.savefig(bias_report_path, dpi=300, bbox_inches='tight')
+        plt.close()
         
         # Additional correlation heatmap for numerical features
         numerical_cols = self.df.select_dtypes(include=[np.number]).columns
@@ -349,8 +355,13 @@ class BiasAnalyzer:
                        square=True, fmt='.2f')
             plt.title('Feature Correlation Matrix')
             plt.tight_layout()
-            plt.savefig('correlation_heatmap.png', dpi=300, bbox_inches='tight')
-            plt.show()
+            
+            # Save correlation heatmap
+            correlation_path = 'correlation_heatmap.png'
+            if output_dir:
+                correlation_path = os.path.join(output_dir, 'correlation_heatmap.png')
+            plt.savefig(correlation_path, dpi=300, bbox_inches='tight')
+            plt.close()
     
     def calculate_bias_score_with_reasoning(self):
         """Calculate bias score and provide detailed reasoning"""

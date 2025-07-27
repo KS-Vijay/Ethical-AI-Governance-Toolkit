@@ -455,9 +455,8 @@ def analyze_bias():
         
         print(f"Results folder: {results_folder}")
         
-        # Change to results directory for plot saving
-        original_dir = os.getcwd()
-        os.chdir(results_folder)
+        # Ensure results directory exists
+        os.makedirs(results_folder, exist_ok=True)
         
         try:
             print("Running bias analysis...")
@@ -493,7 +492,7 @@ def analyze_bias():
             # Generate visualizations with error handling
             try:
                 print("Generating visualizations...")
-                analyzer.create_bias_visualizations()
+                analyzer.create_bias_visualizations(output_dir=results_folder)
                 print("Visualizations completed")
             except Exception as e:
                 print(f"Error generating visualizations: {e}")
@@ -503,7 +502,8 @@ def analyze_bias():
                     plt.text(0.5, 0.5, 'Visualization generation failed\nDataset analysis completed', 
                             ha='center', va='center', transform=plt.gca().transAxes, fontsize=14)
                     plt.title('Bias Analysis Report')
-                    plt.savefig('bias_analysis_report.png', dpi=300, bbox_inches='tight')
+                    fallback_path = os.path.join(results_folder, 'bias_analysis_report.png')
+                    plt.savefig(fallback_path, dpi=300, bbox_inches='tight')
                     plt.close()
                 except:
                     pass
@@ -555,8 +555,10 @@ def analyze_bias():
                 print(f"Error getting bias analysis: {e}")
                 bias_analysis = {"bias_score": 50, "bias_level": "UNKNOWN", "reasoning": ["Analysis incomplete due to errors"]}
             
-        finally:
-            os.chdir(original_dir)
+        except Exception as e:
+            print(f"Error in bias analysis: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Convert visualizations to base64
         plot_files = ['bias_analysis_report.png', 'correlation_heatmap.png']
