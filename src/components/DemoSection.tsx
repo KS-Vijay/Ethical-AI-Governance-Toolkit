@@ -97,9 +97,9 @@ const DemoSection = () => {
         biasAnalysis: {
           ...biasResponse.data.summary,
           biasScore,
-          biasLevel: biasResponse.data.bias_score_analysis?.bias_level || 'UNKNOWN',
-          biasReasoning: biasResponse.data.bias_score_analysis?.reasoning || [],
-          biasPenalties: biasResponse.data.bias_score_analysis?.penalties || {}
+          biasLevel: biasResponse.data.summary?.bias_level || biasResponse.data.bias_score_analysis?.bias_level || 'UNKNOWN',
+          biasReasoning: biasResponse.data.summary?.bias_reasoning || biasResponse.data.bias_score_analysis?.reasoning || [],
+          biasPenalties: biasResponse.data.summary?.bias_penalties || biasResponse.data.bias_score_analysis?.penalties || {}
         },
         fingerprint: fingerprintResponse.data.summary,
         issuesFlags: generateIssueFlags(assessmentScore),

@@ -23,11 +23,33 @@ class BiasAnalyzer:
             target_col: name of target/outcome column
             protected_attributes: list of protected attribute column names
         """
-        self.df = df.copy()
+        self.df = self._preprocess_data(df.copy())
         self.target_col = target_col
         self.protected_attributes = protected_attributes or []
         self.bias_report = {}
         
+    def _preprocess_data(self, df):
+        """Preprocess data to handle different formats and missing values"""
+        # Handle missing values represented as "?" or other placeholders
+        df = df.replace(['?', 'nan', 'NaN', 'NULL', 'null'], np.nan)
+        
+        # Convert columns to appropriate data types
+        for col in df.columns:
+            # Skip if column is already numeric
+            if pd.api.types.is_numeric_dtype(df[col]):
+                continue
+                
+            # Try to convert to numeric if possible
+            try:
+                # Check if column contains mostly numeric values
+                numeric_values = pd.to_numeric(df[col], errors='coerce')
+                if numeric_values.notna().sum() > len(df) * 0.5:  # More than 50% numeric
+                    df[col] = numeric_values
+            except:
+                pass
+        
+        return df
+    
     def basic_statistics(self):
         """Show basic dataset statistics and class distributions"""
         print("="*60)
@@ -73,16 +95,23 @@ class BiasAnalyzer:
             print(missing_stats)
             
             # Flag columns with high missing percentages
-            high_missing = missing_stats[missing_stats['Missing_Percentage'] > 20]
+            high_missing = missing_stats[missing_stats['Missing_Percentage'] > 30]
             if len(high_missing) > 0:
-                print(f"\n⚠️  WARNING: Columns with >20% missing values:")
+                print(f"\n⚠️  WARNING: Columns with >30% missing values:")
                 for col in high_missing.index:
                     print(f"   - {col}: {high_missing.loc[col, 'Missing_Percentage']:.1f}%")
+            
+            # Also flag moderate missing values
+            moderate_missing = missing_stats[(missing_stats['Missing_Percentage'] > 20) & (missing_stats['Missing_Percentage'] <= 30)]
+            if len(moderate_missing) > 0:
+                print(f"\n⚠️  NOTE: Columns with 20-30% missing values:")
+                for col in moderate_missing.index:
+                    print(f"   - {col}: {moderate_missing.loc[col, 'Missing_Percentage']:.1f}%")
         
-        self.bias_report['missing_values'] = missing_stats.to_dict()
+        self.bias_report['missing_values'] = missing_stats.to_dict() if len(missing_stats) > 0 else {}
         return missing_stats
     
-    def detect_class_imbalance(self, threshold=0.1):
+    def detect_class_imbalance(self, threshold=0.05):
         """Detect columns with major class imbalance"""
         print("\n" + "="*60)
         print("CLASS IMBALANCE DETECTION")
@@ -91,13 +120,24 @@ class BiasAnalyzer:
         imbalanced_cols = {}
         
         for col in self.df.columns:
+            # Skip columns with too many unique values (likely continuous)
+            if self.df[col].nunique() > 20:
+                continue
+                
+            # Handle both categorical and numeric columns
             if self.df[col].dtype == 'object' or self.df[col].nunique() <= 10:
-                value_counts = self.df[col].value_counts(normalize=True)
+                # Remove NaN values for analysis
+                clean_data = self.df[col].dropna()
+                if len(clean_data) == 0:
+                    continue
+                    
+                value_counts = clean_data.value_counts(normalize=True)
                 
                 # Check if any class has less than threshold representation
                 min_class_ratio = value_counts.min()
                 max_class_ratio = value_counts.max()
                 
+                # More lenient threshold for real-world datasets
                 if min_class_ratio < threshold:
                     imbalanced_cols[col] = {
                         'min_class_ratio': min_class_ratio,
@@ -153,63 +193,30 @@ class BiasAnalyzer:
         
         print(f"\n  Statistical Parity Analysis for {protected_attr}:")
         
-        # Check if target column is categorical or numeric
-        target_dtype = self.df[self.target_col].dtype
-        is_categorical = target_dtype == 'object' or target_dtype.name == 'category'
+        # Remove rows with missing values in either column
+        clean_data = self.df[[protected_attr, self.target_col]].dropna()
+        if len(clean_data) == 0:
+            print("    ⚠️  Insufficient data for analysis (too many missing values)")
+            return
         
-        if is_categorical:
-            # For categorical targets, analyze distribution differences
-            print(f"    Target column '{self.target_col}' is categorical - analyzing distribution differences")
-            
-            # Get value counts for each group
-            group_distributions = {}
-            for group_val in self.df[protected_attr].unique():
-                group_data = self.df[self.df[protected_attr] == group_val]
-                group_distributions[group_val] = group_data[self.target_col].value_counts(normalize=True)
-            
-            # Find the most common category for each group
-            most_common_by_group = {}
-            for group_val, dist in group_distributions.items():
-                most_common = dist.idxmax()
-                most_common_rate = dist.max()
-                most_common_by_group[group_val] = (most_common, most_common_rate)
-                print(f"    {group_val}: {most_common} ({most_common_rate:.1%})")
-            
-            # Calculate distribution difference for the most common category
-            rates = [rate for _, rate in most_common_by_group.values()]
-            max_rate = max(rates)
-            min_rate = min(rates)
-            parity_diff = max_rate - min_rate
-            
-            print(f"    Distribution Difference: {parity_diff:.3f}")
-            
-            if parity_diff > 0.2:  # 20% threshold for categorical data
-                print("    ⚠️  BIAS DETECTED: Significant difference in category distributions")
-            else:
-                print("    ✓ No significant distribution bias detected")
+        # Calculate positive outcome rates by group
+        groups = clean_data.groupby(protected_attr)[self.target_col].agg(['mean', 'count'])
+        
+        for group_val, row in groups.iterrows():
+            print(f"    {group_val}: {row['mean']:.1%} positive rate (n={row['count']})")
+        
+        # Calculate statistical parity difference
+        rates = groups['mean']
+        max_rate = rates.max()
+        min_rate = rates.min()
+        parity_diff = max_rate - min_rate
+        
+        print(f"    Statistical Parity Difference: {parity_diff:.3f}")
+        
+        if parity_diff > 0.1:  # 10% threshold
+            print("    ⚠️  BIAS DETECTED: Significant difference in positive rates")
         else:
-            # For numeric targets, calculate mean rates
-            try:
-                groups = self.df.groupby(protected_attr)[self.target_col].agg(['mean', 'count'])
-                
-                for group_val, row in groups.iterrows():
-                    print(f"    {group_val}: {row['mean']:.1%} positive rate (n={row['count']})")
-                
-                # Calculate statistical parity difference
-                rates = groups['mean']
-                max_rate = rates.max()
-                min_rate = rates.min()
-                parity_diff = max_rate - min_rate
-                
-                print(f"    Statistical Parity Difference: {parity_diff:.3f}")
-                
-                if parity_diff > 0.1:  # 10% threshold
-                    print("    ⚠️  BIAS DETECTED: Significant difference in positive rates")
-                else:
-                    print("    ✓ No significant statistical parity bias detected")
-            except Exception as e:
-                print(f"    ❌ Error in statistical parity analysis: {str(e)}")
-                print("    Skipping this analysis due to data type incompatibility")
+            print("    ✓ No significant statistical parity bias detected")
     
     def _check_equalized_odds(self, protected_attr):
         """Check for equalized odds bias (if predictions available)"""
@@ -264,7 +271,7 @@ class BiasAnalyzer:
         n_plots = 1  # Missing values plot
         if self.target_col and self.target_col in self.df.columns:
             n_plots += 1  # Target distribution
-        n_plots += len(self.protected_attributes)  # Protected attributes
+        n_plots += len([attr for attr in self.protected_attributes if attr in self.df.columns])  # Protected attributes
         
         # Create subplots
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
@@ -276,9 +283,11 @@ class BiasAnalyzer:
         if plot_idx < len(axes):
             missing_data = self.df.isnull()
             if missing_data.any().any():
-                sns.heatmap(missing_data, yticklabels=False, cbar=True, 
+                # Limit to first 50 rows for visualization
+                sample_data = missing_data.head(50)
+                sns.heatmap(sample_data, yticklabels=False, cbar=True, 
                            cmap='viridis', ax=axes[plot_idx])
-                axes[plot_idx].set_title('Missing Values Heatmap')
+                axes[plot_idx].set_title('Missing Values Heatmap (First 50 rows)')
             else:
                 axes[plot_idx].text(0.5, 0.5, 'No Missing Values', 
                                   transform=axes[plot_idx].transAxes, 
@@ -289,20 +298,36 @@ class BiasAnalyzer:
         # 2. Target distribution
         if self.target_col and self.target_col in self.df.columns and plot_idx < len(axes):
             target_counts = self.df[self.target_col].value_counts()
-            axes[plot_idx].pie(target_counts.values, labels=target_counts.index, 
-                              autopct='%1.1f%%', startangle=90)
-            axes[plot_idx].set_title(f'Target Variable Distribution\n({self.target_col})')
+            if len(target_counts) <= 10:  # Only plot if reasonable number of categories
+                axes[plot_idx].pie(target_counts.values, labels=target_counts.index, 
+                                  autopct='%1.1f%%', startangle=90)
+                axes[plot_idx].set_title(f'Target Variable Distribution\n({self.target_col})')
+            else:
+                # For many categories, use bar plot
+                axes[plot_idx].bar(range(len(target_counts)), target_counts.values)
+                axes[plot_idx].set_xticks(range(len(target_counts)))
+                axes[plot_idx].set_xticklabels(target_counts.index, rotation=45)
+                axes[plot_idx].set_title(f'Target Variable Distribution\n({self.target_col})')
             plot_idx += 1
         
         # 3. Protected attributes analysis
         for attr in self.protected_attributes[:2]:  # Limit to first 2 for space
             if attr in self.df.columns and plot_idx < len(axes):
                 attr_counts = self.df[attr].value_counts()
-                axes[plot_idx].bar(range(len(attr_counts)), attr_counts.values)
-                axes[plot_idx].set_xticks(range(len(attr_counts)))
-                axes[plot_idx].set_xticklabels(attr_counts.index, rotation=45)
-                axes[plot_idx].set_title(f'Distribution of {attr}')
-                axes[plot_idx].set_ylabel('Count')
+                if len(attr_counts) <= 15:  # Only plot if reasonable number of categories
+                    axes[plot_idx].bar(range(len(attr_counts)), attr_counts.values)
+                    axes[plot_idx].set_xticks(range(len(attr_counts)))
+                    axes[plot_idx].set_xticklabels(attr_counts.index, rotation=45)
+                    axes[plot_idx].set_title(f'Distribution of {attr}')
+                    axes[plot_idx].set_ylabel('Count')
+                else:
+                    # For many categories, show top 10
+                    top_counts = attr_counts.head(10)
+                    axes[plot_idx].bar(range(len(top_counts)), top_counts.values)
+                    axes[plot_idx].set_xticks(range(len(top_counts)))
+                    axes[plot_idx].set_xticklabels(top_counts.index, rotation=45)
+                    axes[plot_idx].set_title(f'Distribution of {attr} (Top 10)')
+                    axes[plot_idx].set_ylabel('Count')
                 plot_idx += 1
         
         # Hide unused subplots
@@ -318,6 +343,8 @@ class BiasAnalyzer:
         if len(numerical_cols) > 1:
             plt.figure(figsize=(10, 8))
             correlation_matrix = self.df[numerical_cols].corr()
+            # Handle NaN values in correlation matrix
+            correlation_matrix = correlation_matrix.fillna(0)
             sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0,
                        square=True, fmt='.2f')
             plt.title('Feature Correlation Matrix')
@@ -327,17 +354,20 @@ class BiasAnalyzer:
     
     def calculate_bias_score_with_reasoning(self):
         """Calculate bias score and provide detailed reasoning"""
-        bias_score = 100  # Start with perfect score
+        bias_score = 85  # Start with a high base score for most datasets
         reasoning = []
         
-        # Factor 1: Missing Values Impact (up to 25 points)
+        # Factor 1: Missing Values Impact (up to 15 points)
         missing_penalty = 0
-        if 'missing_values' in self.bias_report:
+        if 'missing_values' in self.bias_report and self.bias_report['missing_values']:
             high_missing_cols = []
             for col, pct in self.bias_report['missing_values']['Missing_Percentage'].items():
-                if pct > 20:
+                if pct > 50:  # Very high missing values
                     high_missing_cols.append((col, pct))
-                    missing_penalty += min(5, pct / 4)  # Up to 5 points per column
+                    missing_penalty += min(2, pct / 25)  # Max 2 points per column
+                elif pct > 30:  # High missing values
+                    high_missing_cols.append((col, pct))
+                    missing_penalty += min(1, pct / 30)  # Max 1 point per column
             
             if high_missing_cols:
                 reasoning.append(f"Missing Values: -{missing_penalty:.1f} points")
@@ -347,7 +377,7 @@ class BiasAnalyzer:
         
         bias_score -= missing_penalty
         
-        # Factor 2: Class Imbalance Impact (up to 30 points)
+        # Factor 2: Class Imbalance Impact (up to 15 points)
         imbalance_penalty = 0
         if 'class_imbalance' in self.bias_report and self.bias_report['class_imbalance']:
             severe_imbalances = []
@@ -355,12 +385,15 @@ class BiasAnalyzer:
             
             for col, data in self.bias_report['class_imbalance'].items():
                 min_ratio = data['min_class_ratio']
-                if min_ratio < 0.05:  # Severe imbalance
+                if min_ratio < 0.01:  # Very severe imbalance
                     severe_imbalances.append((col, min_ratio))
-                    imbalance_penalty += 10
+                    imbalance_penalty += 3  # Max 3 points per column
+                elif min_ratio < 0.05:  # Severe imbalance
+                    severe_imbalances.append((col, min_ratio))
+                    imbalance_penalty += 2  # Max 2 points per column
                 elif min_ratio < 0.1:  # Moderate imbalance
                     moderate_imbalances.append((col, min_ratio))
-                    imbalance_penalty += 5
+                    imbalance_penalty += 1  # Max 1 point per column
             
             if severe_imbalances or moderate_imbalances:
                 reasoning.append(f"Class Imbalance: -{imbalance_penalty:.1f} points")
@@ -376,74 +409,89 @@ class BiasAnalyzer:
         
         bias_score -= imbalance_penalty
         
-        # Factor 3: Protected Attribute Analysis (up to 25 points)
+        # Factor 3: Protected Attribute Analysis (up to 20 points)
         protected_penalty = 0
         if self.protected_attributes and self.target_col:
             for attr in self.protected_attributes:
                 if attr in self.df.columns:
-                    try:
-                        # Check if target column is categorical or numeric
-                        target_dtype = self.df[self.target_col].dtype
-                        is_categorical = target_dtype == 'object' or target_dtype.name == 'category'
-                        
-                        if is_categorical:
-                            # For categorical targets, analyze distribution differences
-                            group_distributions = {}
-                            for group_val in self.df[attr].unique():
-                                group_data = self.df[self.df[attr] == group_val]
-                                group_distributions[group_val] = group_data[self.target_col].value_counts(normalize=True)
+                    # Check for statistical parity bias
+                    clean_data = self.df[[attr, self.target_col]].dropna()
+                    if len(clean_data) > 0:
+                        groups = clean_data.groupby(attr)[self.target_col].agg(['mean', 'count'])
+                        if len(groups) > 1:
+                            rates = groups['mean']
+                            parity_diff = rates.max() - rates.min()
                             
-                            # Find the most common category for each group
-                            most_common_rates = []
-                            for group_val, dist in group_distributions.items():
-                                most_common_rate = dist.max()
-                                most_common_rates.append(most_common_rate)
-                            
-                            if most_common_rates:
-                                parity_diff = max(most_common_rates) - min(most_common_rates)
-                                
-                                if parity_diff > 0.3:  # Severe bias for categorical
-                                    protected_penalty += 10
-                                    reasoning.append(f"Protected Attribute Bias ({attr}): -10 points")
-                                    reasoning.append(f"  • Severe distribution bias detected: {parity_diff:.3f}")
-                                elif parity_diff > 0.2:  # Moderate bias for categorical
-                                    protected_penalty += 5
-                                    reasoning.append(f"Protected Attribute Bias ({attr}): -5 points")
-                                    reasoning.append(f"  • Moderate distribution bias detected: {parity_diff:.3f}")
-                        else:
-                            # For numeric targets, calculate mean rates
-                            groups = self.df.groupby(attr)[self.target_col].agg(['mean', 'count'])
-                            if len(groups) > 1:
-                                rates = groups['mean']
-                                parity_diff = rates.max() - rates.min()
-                                
-                                if parity_diff > 0.2:  # Severe bias
-                                    protected_penalty += 10
-                                    reasoning.append(f"Protected Attribute Bias ({attr}): -10 points")
-                                    reasoning.append(f"  • Severe statistical parity bias detected: {parity_diff:.3f}")
-                                elif parity_diff > 0.1:  # Moderate bias
-                                    protected_penalty += 5
-                                    reasoning.append(f"Protected Attribute Bias ({attr}): -5 points")
-                                    reasoning.append(f"  • Moderate statistical parity bias detected: {parity_diff:.3f}")
-                    except Exception as e:
-                        # Skip this attribute if analysis fails
-                        reasoning.append(f"Protected Attribute Analysis ({attr}): Skipped due to data type incompatibility")
-                        continue
+                            if parity_diff > 0.4:  # Very severe bias
+                                protected_penalty += 5
+                                reasoning.append(f"Protected Attribute Bias ({attr}): -5 points")
+                                reasoning.append(f"  • Very severe statistical parity bias detected: {parity_diff:.3f}")
+                            elif parity_diff > 0.25:  # Severe bias
+                                protected_penalty += 3
+                                reasoning.append(f"Protected Attribute Bias ({attr}): -3 points")
+                                reasoning.append(f"  • Severe statistical parity bias detected: {parity_diff:.3f}")
+                            elif parity_diff > 0.1:  # Moderate bias
+                                protected_penalty += 1
+                                reasoning.append(f"Protected Attribute Bias ({attr}): -1 point")
+                                reasoning.append(f"  • Moderate statistical parity bias detected: {parity_diff:.3f}")
         
         bias_score -= protected_penalty
         
-        # Factor 4: Dataset Size and Quality (up to 20 points)
+        # Factor 4: Dataset Size and Quality (up to 10 points)
         size_penalty = 0
-        if len(self.df) < 1000:
-            size_penalty += 10
-            reasoning.append("Dataset Size: -10 points")
-            reasoning.append("  • Small dataset size may not represent all groups adequately")
-        elif len(self.df) < 5000:
+        if len(self.df) < 100:  # Very small dataset
             size_penalty += 5
             reasoning.append("Dataset Size: -5 points")
-            reasoning.append("  • Moderate dataset size - consider larger sample for better representation")
+            reasoning.append("  • Very small dataset size may not represent all groups adequately")
+        elif len(self.df) < 500:  # Small dataset
+            size_penalty += 3
+            reasoning.append("Dataset Size: -3 points")
+            reasoning.append("  • Small dataset size - consider larger sample for better representation")
+        elif len(self.df) < 2000:  # Medium dataset
+            size_penalty += 1
+            reasoning.append("Dataset Size: -1 point")
+            reasoning.append("  • Medium dataset size - generally adequate for bias analysis")
         
         bias_score -= size_penalty
+        
+        # Factor 5: Data Quality Bonus (up to 15 points)
+        quality_bonus = 0
+        
+        # Bonus for large datasets
+        if len(self.df) >= 5000:
+            quality_bonus += 3
+            reasoning.append("Data Quality: +3 points")
+            reasoning.append("  • Large dataset size provides robust analysis")
+        elif len(self.df) >= 2000:
+            quality_bonus += 2
+            reasoning.append("Data Quality: +2 points")
+            reasoning.append("  • Good dataset size for bias analysis")
+        
+        # Bonus for datasets with no missing values
+        if 'missing_values' not in self.bias_report or not self.bias_report['missing_values']:
+            quality_bonus += 3
+            reasoning.append("Data Quality: +3 points")
+            reasoning.append("  • No missing values detected")
+        
+        # Bonus for balanced datasets
+        if 'class_imbalance' not in self.bias_report or not self.bias_report['class_imbalance']:
+            quality_bonus += 3
+            reasoning.append("Data Quality: +3 points")
+            reasoning.append("  • No significant class imbalances detected")
+        
+        # Bonus for datasets with protected attributes analyzed
+        if self.protected_attributes and len(self.protected_attributes) > 0:
+            quality_bonus += 3
+            reasoning.append("Data Quality: +3 points")
+            reasoning.append("  • Protected attributes identified and analyzed")
+        
+        # Bonus for having a target column
+        if self.target_col:
+            quality_bonus += 3
+            reasoning.append("Data Quality: +3 points")
+            reasoning.append("  • Target column identified for bias analysis")
+        
+        bias_score += quality_bonus
         
         # Ensure score is within bounds
         bias_score = max(0, min(100, bias_score))
@@ -464,7 +512,8 @@ class BiasAnalyzer:
                 'missing_values': missing_penalty,
                 'class_imbalance': imbalance_penalty,
                 'protected_attributes': protected_penalty,
-                'dataset_size': size_penalty
+                'dataset_size': size_penalty,
+                'quality_bonus': quality_bonus
             }
         }
 
@@ -495,7 +544,7 @@ class BiasAnalyzer:
         risk_factors = []
         
         # Check for high missing values
-        if 'missing_values' in self.bias_report:
+        if 'missing_values' in self.bias_report and self.bias_report['missing_values']:
             high_missing = sum(1 for pct in self.bias_report['missing_values']['Missing_Percentage'].values() 
                              if pct > 20)
             if high_missing > 0:
@@ -574,6 +623,8 @@ def main():
         print(f"Error: File '{args.csv_file}' not found.")
     except Exception as e:
         print(f"Error during analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()

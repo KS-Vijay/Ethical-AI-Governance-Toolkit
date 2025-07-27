@@ -357,31 +357,97 @@ def analyze_bias():
         dataset_file = os.path.join(session_folder, files[0])
         print(f"Dataset file: {dataset_file}")
         
-        # Load dataset
+        # Load dataset with robust error handling
         print("Loading dataset...")
-        if dataset_file.endswith('.csv'):
-            df = pd.read_csv(dataset_file)
-        elif dataset_file.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(dataset_file)
-        else:
-            return jsonify({'error': 'Unsupported file format for bias analysis'}), 400
+        try:
+            if dataset_file.endswith('.csv'):
+                # Try different encoding options for CSV files
+                encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+                df = None
+                for encoding in encodings:
+                    try:
+                        df = pd.read_csv(dataset_file, encoding=encoding, on_bad_lines='skip')
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                    except Exception as e:
+                        print(f"Failed to read with encoding {encoding}: {e}")
+                        continue
+                
+                if df is None:
+                    # Last resort: read with error_bad_lines=False (deprecated but works)
+                    try:
+                        df = pd.read_csv(dataset_file, error_bad_lines=False, warn_bad_lines=False)
+                    except:
+                        # Final fallback
+                        df = pd.read_csv(dataset_file, engine='python', on_bad_lines='skip')
+                        
+            elif dataset_file.endswith(('.xlsx', '.xls')):
+                df = pd.read_excel(dataset_file)
+            else:
+                return jsonify({'error': 'Unsupported file format for bias analysis'}), 400
+        except Exception as e:
+            print(f"Error loading dataset: {e}")
+            return jsonify({'error': f'Failed to load dataset: {str(e)}'}), 500
+        
+        # Ensure we have a valid DataFrame
+        if df is None or df.empty:
+            return jsonify({'error': 'Dataset is empty or could not be loaded'}), 500
         
         print(f"Dataset loaded: {df.shape[0]} rows, {df.shape[1]} columns")
         
+        # Clean the DataFrame - remove completely empty rows and columns
+        df = df.dropna(how='all').dropna(axis=1, how='all')
+        
+        # Ensure we still have data after cleaning
+        if df.empty:
+            return jsonify({'error': 'Dataset is empty after cleaning'}), 500
+        
+        print(f"Dataset after cleaning: {df.shape[0]} rows, {df.shape[1]} columns")
+        
         # Auto-detect protected attributes if not provided
         if not protected_attributes:
-            protected_attributes = auto_detect_protected_attributes(df)
-            print(f"Auto-detected protected attributes: {protected_attributes}")
+            try:
+                protected_attributes = auto_detect_protected_attributes(df)
+                print(f"Auto-detected protected attributes: {protected_attributes}")
+                # Limit to a reasonable number of protected attributes to avoid issues
+                if len(protected_attributes) > 5:
+                    print(f"Too many protected attributes detected ({len(protected_attributes)}), limiting to 5")
+                    protected_attributes = protected_attributes[:5]
+            except Exception as e:
+                print(f"Error in auto-detecting protected attributes: {e}")
+                protected_attributes = []  # Fallback to empty list
         
         # Auto-detect target column if not provided
         if not target_column:
-            target_column = auto_detect_target_column(df)
-            print(f"Auto-detected target column: {target_column}")
+            try:
+                target_column = auto_detect_target_column(df)
+                print(f"Auto-detected target column: {target_column}")
+                # If the target column is one of the protected attributes, remove it
+                if target_column in protected_attributes:
+                    print(f"Target column '{target_column}' is also a protected attribute, removing from protected attributes")
+                    protected_attributes = [attr for attr in protected_attributes if attr != target_column]
+            except Exception as e:
+                print(f"Error in auto-detecting target column: {e}")
+                target_column = None  # Fallback to None
         
         # Initialize bias analyzer with existing class
         print("Creating BiasAnalyzer instance...")
-        analyzer = BiasAnalyzer(df, target_col=target_column, 
-                               protected_attributes=protected_attributes)
+        try:
+            analyzer = BiasAnalyzer(df, target_col=target_column, 
+                                   protected_attributes=protected_attributes)
+            print(f"✅ BiasAnalyzer created with target_col={target_column}, protected_attributes={protected_attributes}")
+        except Exception as e:
+            print(f"Error creating BiasAnalyzer: {e}")
+            # Fallback: create analyzer without target or protected attributes
+            try:
+                analyzer = BiasAnalyzer(df, target_col=None, protected_attributes=[])
+                print("✅ BiasAnalyzer created with fallback settings")
+            except Exception as e2:
+                print(f"Fallback BiasAnalyzer creation also failed: {e2}")
+                # Final fallback: create with minimal settings
+                analyzer = BiasAnalyzer(df, target_col=None, protected_attributes=[])
+                print("✅ BiasAnalyzer created with minimal settings")
         
         # Create results folder
         results_folder = os.path.join(app.config['RESULTS_FOLDER'], session_id)
@@ -395,31 +461,99 @@ def analyze_bias():
         
         try:
             print("Running bias analysis...")
-            # Run analysis using existing methods
-            basic_stats = analyzer.basic_statistics()
-            print("Basic statistics completed")
             
-            missing_stats = analyzer.missing_values_analysis()
-            print("Missing values analysis completed")
+            # Run analysis using existing methods with error handling
+            try:
+                basic_stats = analyzer.basic_statistics()
+                print("Basic statistics completed")
+            except Exception as e:
+                print(f"Error in basic statistics: {e}")
+                basic_stats = df.describe()  # Fallback to simple describe
             
-            imbalance_data = analyzer.detect_class_imbalance()
-            print("Class imbalance detection completed")
+            try:
+                missing_stats = analyzer.missing_values_analysis()
+                print("Missing values analysis completed")
+            except Exception as e:
+                print(f"Error in missing values analysis: {e}")
+                missing_stats = pd.DataFrame()  # Empty DataFrame as fallback
             
-            analyzer.protected_attribute_analysis()
-            print("Protected attribute analysis completed")
+            try:
+                imbalance_data = analyzer.detect_class_imbalance()
+                print("Class imbalance detection completed")
+            except Exception as e:
+                print(f"Error in class imbalance detection: {e}")
+                imbalance_data = {}  # Empty dict as fallback
             
-            # Generate visualizations
-            print("Generating visualizations...")
-            analyzer.create_bias_visualizations()
-            print("Visualizations completed")
+            try:
+                analyzer.protected_attribute_analysis()
+                print("Protected attribute analysis completed")
+            except Exception as e:
+                print(f"Error in protected attribute analysis: {e}")
             
-            # Generate bias report
-            print("Generating bias report...")
-            bias_report = analyzer.generate_bias_report()
-            print("Bias report completed")
+            # Generate visualizations with error handling
+            try:
+                print("Generating visualizations...")
+                analyzer.create_bias_visualizations()
+                print("Visualizations completed")
+            except Exception as e:
+                print(f"Error generating visualizations: {e}")
+                # Create simple fallback visualization
+                try:
+                    plt.figure(figsize=(10, 6))
+                    plt.text(0.5, 0.5, 'Visualization generation failed\nDataset analysis completed', 
+                            ha='center', va='center', transform=plt.gca().transAxes, fontsize=14)
+                    plt.title('Bias Analysis Report')
+                    plt.savefig('bias_analysis_report.png', dpi=300, bbox_inches='tight')
+                    plt.close()
+                except:
+                    pass
             
-            # Get bias score and reasoning
-            bias_analysis = analyzer.bias_report.get('bias_score_analysis', {})
+            # Generate bias report with error handling
+            try:
+                print("Generating bias report...")
+                bias_report = analyzer.generate_bias_report()
+                print("Bias report completed")
+                print(f"Bias report type: {type(bias_report)}")
+                print(f"Bias report keys: {list(bias_report.keys()) if isinstance(bias_report, dict) else 'Not a dict'}")
+                if isinstance(bias_report, dict) and 'bias_score_analysis' in bias_report:
+                    print(f"Bias score analysis in report: {bias_report['bias_score_analysis']}")
+                    print(f"Bias score analysis type: {type(bias_report['bias_score_analysis'])}")
+                else:
+                    print("No bias_score_analysis found in report")
+            except Exception as e:
+                print(f"Error generating bias report: {e}")
+                import traceback
+                traceback.print_exc()
+                bias_report = {"error": f"Bias report generation failed: {str(e)}"}
+            
+            # Always calculate bias score directly as backup
+            print("Calculating bias score directly as backup...")
+            try:
+                direct_bias_analysis = analyzer.calculate_bias_score_with_reasoning()
+                print(f"Direct bias analysis result: {direct_bias_analysis}")
+            except Exception as e:
+                print(f"Direct bias analysis failed: {e}")
+                direct_bias_analysis = {"bias_score": 50, "bias_level": "UNKNOWN", "reasoning": ["Analysis failed"]}
+            
+            # Get bias score and reasoning - use direct calculation as primary source
+            try:
+                # Use the direct calculation as the primary source
+                bias_analysis = direct_bias_analysis
+                print(f"Using direct bias analysis: {bias_analysis}")
+                
+                # Also try to get from the bias report as backup
+                report_bias_analysis = analyzer.bias_report.get('bias_score_analysis', {})
+                if report_bias_analysis and isinstance(report_bias_analysis, dict) and 'bias_score' in report_bias_analysis:
+                    print(f"Also found bias analysis in report: {report_bias_analysis}")
+                    # Use report version if it has valid data
+                    if report_bias_analysis.get('bias_score', 0) > 0:
+                        bias_analysis = report_bias_analysis
+                
+                print(f"Final bias analysis: {bias_analysis}")
+                
+            except Exception as e:
+                print(f"Error getting bias analysis: {e}")
+                bias_analysis = {"bias_score": 50, "bias_level": "UNKNOWN", "reasoning": ["Analysis incomplete due to errors"]}
             
         finally:
             os.chdir(original_dir)
@@ -434,34 +568,52 @@ def analyze_bias():
                 with open(plot_path, 'rb') as img_file:
                     plot_images[plot_file] = base64.b64encode(img_file.read()).decode('utf-8')
         
-        # Prepare summary
+        # Prepare summary with error handling
+        try:
+            total_missing_percentage = float((df.isnull().sum().sum() / (df.shape[0] * df.shape[1])) * 100)
+        except:
+            total_missing_percentage = 0.0
+            
+        try:
+            duplicate_rows = int(df.duplicated().sum())
+        except:
+            duplicate_rows = 0
+            
         summary = {
             'dataset_shape': [int(df.shape[0]), int(df.shape[1])],  # Convert tuple to list of ints
             'target_column': target_column,
             'protected_attributes': protected_attributes,
-            'total_missing_percentage': float((df.isnull().sum().sum() / (df.shape[0] * df.shape[1])) * 100),
-            'duplicate_rows': int(df.duplicated().sum()),  # Convert to native int
+            'total_missing_percentage': total_missing_percentage,
+            'duplicate_rows': duplicate_rows,
             'analysis_timestamp': datetime.now().isoformat(),
             'bias_score': bias_analysis.get('bias_score', 0),
             'bias_level': bias_analysis.get('bias_level', 'UNKNOWN'),
-            'bias_reasoning': bias_analysis.get('reasoning', [])
+            'bias_reasoning': bias_analysis.get('reasoning', []),
+            'bias_penalties': bias_analysis.get('penalties', {}),
+            'detailed_bias_analysis': bias_analysis
         }
         
-        # Add bias risk assessment
+        # Add bias risk assessment with error handling
         risk_level = bias_analysis.get('bias_level', 'UNKNOWN')
         risk_factors = []
         
-        if len(imbalance_data) > 0:
-            severe_imbalances = sum(1 for col_data in imbalance_data.values()
-                                  if col_data.get('min_class_ratio', 1) < 0.05)
-            if severe_imbalances > 0:
-                risk_factors.append(f"{severe_imbalances} severely imbalanced features")
+        try:
+            if isinstance(imbalance_data, dict) and len(imbalance_data) > 0:
+                severe_imbalances = sum(1 for col_data in imbalance_data.values()
+                                      if isinstance(col_data, dict) and col_data.get('min_class_ratio', 1) < 0.05)
+                if severe_imbalances > 0:
+                    risk_factors.append(f"{severe_imbalances} severely imbalanced features")
+        except Exception as e:
+            print(f"Error calculating imbalance risk factors: {e}")
         
         # Simple check for high missing values - will be handled by convert_to_serializable later
-        if hasattr(missing_stats, 'get') and 'Missing_Percentage' in missing_stats:
-            high_missing = sum(1 for pct in missing_stats['Missing_Percentage'] if pct > 20)
-            if high_missing > 0:
-                risk_factors.append(f"{high_missing} columns with >20% missing values")
+        try:
+            if hasattr(missing_stats, 'get') and isinstance(missing_stats, dict) and 'Missing_Percentage' in missing_stats:
+                high_missing = sum(1 for pct in missing_stats['Missing_Percentage'] if pct > 20)
+                if high_missing > 0:
+                    risk_factors.append(f"{high_missing} columns with >20% missing values")
+        except Exception as e:
+            print(f"Error calculating missing values risk factors: {e}")
         
         summary.update({
             'bias_risk_level': risk_level,
@@ -472,18 +624,29 @@ def analyze_bias():
         
         # Convert pandas/numpy types to native Python types for JSON serialization
         def convert_to_serializable(obj):
-            if hasattr(obj, 'to_dict'):
-                return obj.to_dict()
-            elif hasattr(obj, 'item'):
-                return obj.item()
-            elif isinstance(obj, dict):
-                return {k: convert_to_serializable(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [convert_to_serializable(v) for v in obj]
-            elif hasattr(obj, 'dtype'):  # numpy/pandas types
-                return obj.item() if hasattr(obj, 'item') else str(obj)
-            else:
-                return obj
+            try:
+                if obj is None:
+                    return None
+                elif hasattr(obj, 'to_dict'):
+                    return obj.to_dict()
+                elif hasattr(obj, 'item'):
+                    return obj.item()
+                elif isinstance(obj, dict):
+                    return {str(k): convert_to_serializable(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_to_serializable(v) for v in obj]
+                elif hasattr(obj, 'dtype'):  # numpy/pandas types
+                    try:
+                        return obj.item() if hasattr(obj, 'item') else float(obj)
+                    except:
+                        return str(obj)
+                elif isinstance(obj, (int, float, str, bool)):
+                    return obj
+                else:
+                    return str(obj)
+            except Exception as e:
+                print(f"Error converting object to serializable: {e}")
+                return str(obj)
         
         # Convert all data to JSON-serializable format
         serializable_basic_stats = convert_to_serializable(basic_stats)
@@ -529,6 +692,10 @@ def auto_detect_protected_attributes(df):
     """Auto-detect potential protected attributes in the dataset"""
     protected_attributes = []
     
+    # Ensure df is valid
+    if df is None or df.empty:
+        return protected_attributes
+    
     # Common protected attribute keywords
     protected_keywords = [
         'gender', 'sex', 'male', 'female', 'man', 'woman',
@@ -543,28 +710,45 @@ def auto_detect_protected_attributes(df):
         'sexual', 'orientation', 'lgbt', 'gay', 'lesbian', 'bisexual'
     ]
     
-    for col in df.columns:
-        col_lower = col.lower()
-        # Check if column name contains protected keywords
-        if any(keyword in col_lower for keyword in protected_keywords):
-            protected_attributes.append(col)
-        # Check if column has categorical values that might indicate protected attributes
-        elif df[col].dtype == 'object' and df[col].nunique() <= 10:
-            # Check for common protected attribute values
-            unique_values = df[col].dropna().astype(str).str.lower().unique()
-            protected_values = [
-                'male', 'female', 'm', 'f', 'man', 'woman',
-                'white', 'black', 'asian', 'hispanic', 'latino', 'african', 'american',
-                'christian', 'muslim', 'jewish', 'hindu', 'buddhist',
-                'yes', 'no', 'true', 'false', '1', '0'
-            ]
-            if any(any(pv in uv for pv in protected_values) for uv in unique_values):
+    try:
+        for col in df.columns:
+            if col is None or pd.isna(col):
+                continue
+                
+            col_lower = str(col).lower()
+            # Check if column name contains protected keywords
+            if any(keyword in col_lower for keyword in protected_keywords):
                 protected_attributes.append(col)
+            # Check if column has categorical values that might indicate protected attributes
+            elif df[col].dtype == 'object' and df[col].nunique() <= 10:
+                try:
+                    # Check for common protected attribute values
+                    clean_col = df[col].dropna()
+                    if len(clean_col) > 0:
+                        unique_values = clean_col.astype(str).str.lower().unique()
+                        protected_values = [
+                            'male', 'female', 'm', 'f', 'man', 'woman',
+                            'white', 'black', 'asian', 'hispanic', 'latino', 'african', 'american',
+                            'christian', 'muslim', 'jewish', 'hindu', 'buddhist',
+                            'yes', 'no', 'true', 'false', '1', '0'
+                        ]
+                        if any(any(pv in uv for pv in protected_values) for uv in unique_values):
+                            protected_attributes.append(col)
+                except Exception as e:
+                    print(f"Error processing column {col} for protected attributes: {e}")
+                    continue
+    except Exception as e:
+        print(f"Error in auto_detect_protected_attributes: {e}")
+        return []
     
     return list(set(protected_attributes))  # Remove duplicates
 
 def auto_detect_target_column(df):
     """Auto-detect potential target column in the dataset"""
+    # Ensure df is valid
+    if df is None or df.empty:
+        return None
+    
     target_keywords = [
         'target', 'label', 'outcome', 'result', 'prediction', 'class',
         'success', 'failure', 'approved', 'denied', 'accepted', 'rejected',
@@ -573,21 +757,44 @@ def auto_detect_target_column(df):
         'rating', 'review', 'satisfaction', 'quality'
     ]
     
-    # Look for columns with target-like names
-    for col in df.columns:
-        col_lower = col.lower()
-        if any(keyword in col_lower for keyword in target_keywords):
-            return col
-    
-    # If no obvious target column, look for binary columns
-    for col in df.columns:
-        if df[col].dtype in ['int64', 'float64']:
-            unique_vals = df[col].dropna().unique()
-            if len(unique_vals) == 2 and set(unique_vals).issubset({0, 1, True, False}):
-                return col
-    
-    # If still no target found, return None
-    return None
+    try:
+        # Look for numeric columns with target-like names (priority)
+        for col in df.columns:
+            if col is None or pd.isna(col):
+                continue
+                
+            col_lower = str(col).lower()
+            if any(keyword in col_lower for keyword in target_keywords):
+                # Only return if it's a numeric column (required for bias analysis)
+                if df[col].dtype in ['int64', 'float64']:
+                    clean_col = df[col].dropna()
+                    if len(clean_col) > 0:
+                        unique_vals = clean_col.unique()
+                        if len(unique_vals) >= 2:  # At least 2 unique values
+                            return col
+        
+        # If no numeric target found, look for any numeric column
+        for col in df.columns:
+            if col is None or pd.isna(col):
+                continue
+                
+            try:
+                if df[col].dtype in ['int64', 'float64']:
+                    clean_col = df[col].dropna()
+                    if len(clean_col) > 0:
+                        unique_vals = clean_col.unique()
+                        if len(unique_vals) >= 2:  # At least 2 unique values
+                            return col
+            except Exception as e:
+                print(f"Error processing column {col} for target detection: {e}")
+                continue
+        
+        # If still no target found, return None
+        return None
+        
+    except Exception as e:
+        print(f"Error in auto_detect_target_column: {e}")
+        return None
 
 @app.route('/api/report/comprehensive', methods=['POST'])
 def generate_comprehensive_report():

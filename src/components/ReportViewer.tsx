@@ -110,6 +110,59 @@ const ReportViewer: React.FC<ReportViewerProps> = ({
         </Card>
       </div>
 
+      {/* Bias Analysis Details */}
+      {reportData.biasAnalysis && reportData.biasAnalysis.biasReasoning && reportData.biasAnalysis.biasReasoning.length > 0 && (
+        <Card className="bg-[#1b263b]/80 border border-orange-500 shadow-lg backdrop-blur-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-400">
+              <AlertTriangle className="w-5 h-5" />
+              Bias Analysis Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-sm font-semibold text-orange-300">Bias Level:</span>
+                <Badge className={`text-white px-2 py-1 ${
+                  reportData.biasAnalysis.biasLevel === 'LOW' ? 'bg-green-600' :
+                  reportData.biasAnalysis.biasLevel === 'MODERATE' ? 'bg-yellow-600' :
+                  reportData.biasAnalysis.biasLevel === 'HIGH' ? 'bg-red-600' :
+                  'bg-gray-600'
+                }`}>
+                  {reportData.biasAnalysis.biasLevel}
+                </Badge>
+              </div>
+              
+              <div>
+                <h5 className="text-sm font-semibold text-orange-300 mb-2">Detailed Reasoning:</h5>
+                <ul className="space-y-2 text-sm text-white">
+                  {reportData.biasAnalysis.biasReasoning.map((reason: string, index: number) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <span className="text-orange-400 mt-1">•</span>
+                      <span>{reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {reportData.biasAnalysis.biasPenalties && Object.keys(reportData.biasAnalysis.biasPenalties).length > 0 && (
+                <div>
+                  <h5 className="text-sm font-semibold text-orange-300 mb-2">Penalty Breakdown:</h5>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                    {Object.entries(reportData.biasAnalysis.biasPenalties).map(([key, value]) => (
+                      <div key={key} className="bg-[#0f1a2e]/60 p-2 rounded border border-orange-500/30">
+                        <span className="text-orange-400 font-medium">{key.replace(/_/g, ' ').toUpperCase()}:</span>
+                        <span className="text-white ml-1">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Dimension Breakdown */}
       <Card className="bg-[#101d35]/80 border border-cyan-700 shadow-lg backdrop-blur-md">
         <CardHeader>
