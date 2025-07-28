@@ -26,3 +26,5 @@ dist-ssr
 *__pycache__/
 results/
 uploads/
+
+.env

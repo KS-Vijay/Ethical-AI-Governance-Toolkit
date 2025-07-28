@@ -17,6 +17,7 @@ This toolkit empowers teams to build AI more responsibly, while giving regulator
 - **Copyright & Data Usage Auditing** — Detect unauthorized or copyrighted data in model training.
 - **User Data Protection** — Prevent misuse of user-uploaded data for future model training.
 - **Transparent Reporting** — Generate ethical audit reports to share with stakeholders.
+- **Email Verification** — Secure user registration with email verification codes.
 
 ## Who It’s For
 
@@ -57,11 +58,15 @@ pip install -r requirements.txt
 # Follow the instructions in MONGODB_SETUP.md to set up MongoDB Atlas
 # Copy env.example to .env and fill in your MongoDB connection string
 
-#Step 6: Run the api file
+#Step 6: Set up Email Verification (Required for signup)
+# Follow the instructions in EMAIL_SETUP.md to configure Gmail for email verification
+# Create a .env file with your email credentials
+
+#Step 7: Run the api file
 cd /api
 python app.py
 
-# Step 7: Start the development server with auto-reloading and an instant preview.
+# Step 8: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 

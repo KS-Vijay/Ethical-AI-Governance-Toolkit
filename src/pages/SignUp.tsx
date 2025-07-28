@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import EmailVerification from "../components/EmailVerification";
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -12,6 +13,8 @@ export default function SignUp() {
   });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -43,8 +46,10 @@ export default function SignUp() {
         return;
       }
       
-      setMessage("✅ Signup successful! Redirecting to login...");
-      setTimeout(() => navigate("/login"), 1500);
+      setMessage("✅ Verification code sent to your email!");
+      setVerificationEmail(formData.email);
+      setShowVerification(true);
+      setLoading(false);
 
     } catch (error) {
       console.error("Signup error:", error);
@@ -53,11 +58,26 @@ export default function SignUp() {
     }
   };
 
+  const handleVerificationSuccess = () => {
+    setShowVerification(false);
+    setMessage("");
+  };
+
   const getMessageColor = () => {
     if (message.startsWith('✅')) return 'text-green-400';
     if (message.startsWith('⏳')) return 'text-cyan-400';
     return 'text-red-400';
   };
+
+  // Show verification component if verification is needed
+  if (showVerification) {
+    return (
+      <EmailVerification 
+        email={verificationEmail} 
+        onVerificationSuccess={handleVerificationSuccess}
+      />
+    );
+  }
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">

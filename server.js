@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 
 import User from "./User.js";
+import authRouter from "./auth.js";
 
 dotenv.config();
 
@@ -19,44 +20,44 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ Connected to MongoDB"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// Signup
-app.post("/signup", async (req, res) => {
-  const { name, email, password, company } = req.body;
-
-  if (!name || !email || !password || !company) {
-    return res.status(400).json({ message: "All fields are required." });
-  }
-
-  if (password.length < 8) {
-    return res.status(400).json({ message: "Password must be at least 8 characters." });
-  }
-
-  try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ message: "User already exists." });
-
-    const newUser = new User({ name, email, password, company });
-    await newUser.save();
-
-    return res.status(201).json({ message: "Signup successful!" });
-  } catch (err) {
-    console.error("Signup error:", err);
-    return res.status(500).json({ message: "Server error." });
-  }
-});
+// Use auth router for authentication endpoints
+app.use("/", authRouter);
 
 // Login
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "User not found." });
+    if (!user) {
+      console.log(`❌ Login attempt: User not found for email: ${email}`);
+      return res.status(400).json({ message: "User not found." });
+    }
+
+    console.log(`🔍 Login attempt for user: ${email}`);
+    console.log(`📧 User verified status: ${user.isVerified}`);
+
+    // Check if user is verified
+    if (!user.isVerified) {
+      console.log(`⚠️ Unverified user login attempt: ${email}`);
+      return res.status(400).json({ 
+        message: "Please verify your email before logging in.",
+        needsVerification: true,
+        email: email
+      });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials." });
+    console.log(`🔐 Password match: ${isMatch}`);
+    
+    if (!isMatch) {
+      console.log(`❌ Invalid password for user: ${email}`);
+      return res.status(400).json({ message: "Invalid credentials." });
+    }
 
     // Generate JWT token
     const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    console.log(`✅ Successful login for user: ${email}`);
 
     return res.status(200).json({
       message: "Login successful",
@@ -72,6 +73,7 @@ app.post("/login", async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 });
+
 // API Key Generator
 app.post("/generate-api-key", async (req, res) => {
   const authHeader = req.headers.authorization;
