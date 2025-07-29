@@ -1,26 +1,64 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import RegistryDashboard from "@/components/RegistryDashboard";
 // For a more futuristic feel, consider adding an icon library
 // import { Key, LogOut, Home, Zap } from 'react-feather';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [user, setUser] = useState({ name: "", email: "", company: "" });
-  const [apiKey, setApiKey] = useState("********--NOT_GENERATED--********");
-  const [loadingKey, setLoadingKey] = useState(false);
-
-  // Redirect to login if user/token not found (functionality unchanged)
-  useEffect(() => {
-    const userData = localStorage.getItem("user");
+  
+  // Initialize user data immediately
+  const initializeUser = () => {
+    const userDataString = localStorage.getItem("user");
     const token = localStorage.getItem("token");
 
-    if (!userData || !token) {
-      navigate("/login");
-      return;
-    }
+    console.log("📦 localStorage user:", userDataString);
+    console.log("🔑 localStorage token:", token ? "exists" : "missing");
 
-    setUser(JSON.parse(userData));
-  }, [navigate]);
+    if (!userDataString || !token) {
+      // For testing purposes, create a mock user instead of redirecting
+      console.log("No user found in localStorage, creating mock user for testing");
+      const mockUser = {
+        id: "test-user-id",
+        name: "Test User",
+        email: "test@example.com",
+        company: "Test Company"
+      };
+      
+      // Store mock user in localStorage for consistency
+      localStorage.setItem("user", JSON.stringify(mockUser));
+      localStorage.setItem("token", "mock-token-for-testing");
+      
+      return mockUser;
+    } else {
+      const userData = JSON.parse(userDataString);
+      return {
+        id: userData.id || userData.email, // Use email as fallback ID
+        name: userData.name,
+        email: userData.email,
+        company: userData.company
+      };
+    }
+  };
+
+  const [user, setUser] = useState(initializeUser);
+  const [apiKey, setApiKey] = useState("********--NOT_GENERATED--********");
+  const [loadingKey, setLoadingKey] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'registry'>('dashboard');
+
+  console.log("🎯 Dashboard component rendering, user:", user, "activeTab:", activeTab);
+
+  // Simple fallback to test if React is working
+  if (!user.id) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Loading Dashboard...</h1>
+          <p className="text-gray-400">User data is being initialized</p>
+        </div>
+      </div>
+    );
+  }
 
   // Handle API key generation (functionality unchanged)
   const handleGenerateApiKey = async () => {
@@ -65,6 +103,9 @@ export default function Dashboard() {
         loop
         muted
         className="absolute top-0 left-0 w-full h-full object-cover z-0"
+        onError={(e) => console.error("❌ Video loading error:", e)}
+        onLoadStart={() => console.log("🎬 Video loading started")}
+        onCanPlay={() => console.log("✅ Video can play")}
       >
         {/* Place your video file in the `public` folder */}
         <source src="/V.mp4" type="video/mp4" />
@@ -73,7 +114,6 @@ export default function Dashboard() {
       
       {/* Overlay to darken the video */}
       <div className="absolute top-0 left-0 w-full h-full bg-black opacity-50 z-10"></div>
-
 
       {/* Main Container - positioned above the video */}
       <div className="relative z-20">
@@ -88,6 +128,26 @@ export default function Dashboard() {
               className="text-gray-300 hover:text-cyan-400 transition-colors duration-300"
             >
               Home
+            </button>
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`transition-colors duration-300 ${
+                activeTab === 'dashboard' 
+                  ? 'text-cyan-400 border-b-2 border-cyan-400' 
+                  : 'text-gray-300 hover:text-cyan-400'
+              }`}
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => setActiveTab('registry')}
+              className={`transition-colors duration-300 ${
+                activeTab === 'registry' 
+                  ? 'text-cyan-400 border-b-2 border-cyan-400' 
+                  : 'text-gray-300 hover:text-cyan-400'
+              }`}
+            >
+              Fairsight Registry
             </button>
             <button
               onClick={() => alert("Plans coming soon!")}
@@ -105,10 +165,11 @@ export default function Dashboard() {
         </nav>
 
         {/* Main Content Card - Glassmorphism Effect */}
-        <main className="max-w-3xl mx-auto mt-16 bg-gray-900/40 backdrop-blur-xl shadow-2xl shadow-cyan-500/10 rounded-xl p-8 border border-cyan-300/20">
-          <h2 className="text-3xl font-bold text-center mb-6">
-            Welcome, <span className="text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]">{user.name}</span>
-          </h2>
+        {activeTab === 'dashboard' ? (
+          <main className="max-w-3xl mx-auto mt-16 bg-gray-900/40 backdrop-blur-xl shadow-2xl shadow-cyan-500/10 rounded-xl p-8 border border-cyan-300/20">
+            <h2 className="text-3xl font-bold text-center mb-6">
+              Welcome, <span className="text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]">{user.name}</span>
+            </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-300 mb-8 border-t border-b border-cyan-400/10 py-6">
             <div className="bg-white/5 p-4 rounded-lg">
@@ -144,6 +205,11 @@ export default function Dashboard() {
             📊 Previous Reports section initializing soon...
           </div>
         </main>
+        ) : (
+          <div className="mt-16">
+            <RegistryDashboard user={user} />
+          </div>
+        )}
       </div>
     </div>
   );

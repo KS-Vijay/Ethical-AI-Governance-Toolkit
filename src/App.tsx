@@ -12,12 +12,14 @@ import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
-
+console.log("🚀 App component loading...");
 
 // 🔵 Wrapper to add background video only on home route
 const RouteWithVideo = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const showVideo = location.pathname === "/";
+
+  console.log("📍 Current route:", location.pathname);
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
@@ -27,24 +29,28 @@ const RouteWithVideo = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <RouteWithVideo>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </RouteWithVideo>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  console.log("🎯 App component rendering");
+  
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <RouteWithVideo>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </RouteWithVideo>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

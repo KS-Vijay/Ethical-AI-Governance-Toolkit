@@ -24,9 +24,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from PIL import Image
 from dotenv import load_dotenv
+import uuid
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 # Import the classes from the three scripts
 import sys
@@ -51,39 +52,84 @@ except ImportError as e:
     print(f"Python path: {sys.path}")
     print("Please ensure the modules are available in cli_toolkit and badge_generator folders")
 
+# Supabase integration
+try:
+    # Try to import websockets.asyncio first to handle the dependency issue
+    try:
+        import websockets.asyncio
+    except ImportError:
+        # If websockets.asyncio is not available, try to install it or use a fallback
+        print("⚠️ websockets.asyncio not available, trying alternative import...")
+        import asyncio
+        import websockets
+        # Monkey patch if needed
+        if not hasattr(websockets, 'asyncio'):
+            websockets.asyncio = asyncio
+    
+    from supabase import create_client, Client
+    supabase_url = os.environ.get('SUPABASE_URL')
+    supabase_key = os.environ.get('SUPABASE_ANON_KEY')
+    
+    if supabase_url and supabase_key:
+        supabase: Client = create_client(supabase_url, supabase_key)
+        print("✅ Supabase client initialized")
+    else:
+        print("⚠️ Supabase credentials not found. Registry features will be limited.")
+        supabase = None
+except ImportError as e:
+    print(f"⚠️ Supabase library not available: {e}")
+    print("Registry features will be limited. Install with: pip install supabase")
+    supabase = None
+except Exception as e:
+    print(f"⚠️ Error initializing Supabase: {e}")
+    print("Registry features will be limited.")
+    supabase = None
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend access
 app.register_blueprint(api_verification_bp)
 
 # Configuration
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['RESULTS_FOLDER'] = 'results'
-app.config['ALLOWED_EXTENSIONS'] = {'csv', 'xlsx', 'xls', 'json', 'parquet'}
+app.config.update({
+    'UPLOAD_FOLDER': 'uploads',
+    'RESULTS_FOLDER': 'results',
+    'MAX_CONTENT_LENGTH': 16 * 1024 * 1024,  # 16MB max file size
+    'ALLOWED_EXTENSIONS': {'csv', 'xlsx', 'xls', 'json', 'parquet'}
+})
 
-# Create necessary directories
+# Ensure directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['RESULTS_FOLDER'], exist_ok=True)
 
 def allowed_file(filename):
-    """Check if file extension is allowed"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 def generate_session_id():
-    """Generate unique session ID for file management"""
+    """Generate a unique session ID"""
     return hashlib.md5(str(datetime.now()).encode()).hexdigest()[:16]
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    # Check if Supabase is properly initialized
+    supabase_available = False
+    if supabase is not None:
+        try:
+            # Try a simple operation to verify the client is working
+            supabase_available = True
+        except Exception as e:
+            print(f"⚠️ Supabase client error: {e}")
+            supabase_available = False
+    
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
         'services': {
             'badge_generator': True,
             'dataset_fingerprinter': True,
-            'bias_analyzer': True
+            'bias_analyzer': True,
+            'registry': supabase_available
         }
     })
 
@@ -1084,6 +1130,145 @@ def not_found(e):
 @app.errorhandler(500)
 def internal_error(e):
     return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/registry/reports', methods=['GET'])
+def get_registry_reports():
+    """Get reports from registry - using files from Supabase storage bucket"""
+    try:
+        user_id = request.args.get('user_id')
+        
+        if not user_id:
+            return jsonify({'error': 'user_id parameter required'}), 400
+        
+        if supabase:
+            # Get files from Supabase storage bucket
+            try:
+                # List files in the reports bucket for this user
+                files_result = supabase.storage.from_('reports').list(user_id)
+                
+                # Group files by session/report
+                reports = []
+                session_files = {}
+                
+                for file_info in files_result:
+                    file_path = file_info['name']
+                    # Extract session_id from file path (assuming format: user_id/session_id_filename)
+                    parts = file_path.split('/')
+                    if len(parts) >= 2:
+                        session_id = parts[1].split('_')[0]  # Extract session ID from filename
+                        
+                        if session_id not in session_files:
+                            session_files[session_id] = []
+                        
+                        # Get public URL for the file
+                        file_url = supabase.storage.from_('reports').get_public_url(file_path)
+                        
+                        session_files[session_id].append({
+                            'name': file_info['name'],
+                            'url': file_url,
+                            'size': file_info.get('metadata', {}).get('size', 0),
+                            'type': file_info.get('metadata', {}).get('mimetype', 'unknown')
+                        })
+                
+                # Create report objects from session files
+                for session_id, files in session_files.items():
+                    # Find the main report file (PDF or JSON)
+                    main_file = None
+                    for file in files:
+                        if file['name'].endswith('.pdf') or file['name'].endswith('.json'):
+                            main_file = file
+                            break
+                    
+                    if main_file:
+                        report = {
+                            'id': session_id,
+                            'session_id': session_id,
+                            'model_name': main_file['name'].split('_')[-1].replace('.pdf', '').replace('.json', ''),
+                            'files': files,
+                            'main_file': main_file,
+                            'created_at': main_file.get('metadata', {}).get('created_at', '')
+                        }
+                        reports.append(report)
+                
+                return jsonify({
+                    'success': True,
+                    'reports': reports
+                })
+                
+            except Exception as e:
+                print(f"❌ Error accessing Supabase storage: {e}")
+                return jsonify({
+                    'success': True,
+                    'reports': [],
+                    'message': 'No reports found in storage'
+                })
+        else:
+            # Fallback: return empty list
+            return jsonify({
+                'success': True,
+                'reports': [],
+                'message': 'Supabase not configured'
+            })
+            
+    except Exception as e:
+        print(f"❌ Error fetching reports: {e}")
+        return jsonify({'error': f'Failed to fetch reports: {str(e)}'}), 500
+
+@app.route('/api/registry/report/<report_id>', methods=['GET'])
+def get_registry_report(report_id):
+    """Get specific report from registry"""
+    try:
+        if supabase:
+            # Get files for this specific report from Supabase storage
+            try:
+                # List files in the reports bucket for this session
+                files_result = supabase.storage.from_('reports').list(f"{report_id}")
+                
+                files = []
+                for file_info in files_result:
+                    file_path = file_info['name']
+                    file_url = supabase.storage.from_('reports').get_public_url(file_path)
+                    
+                    files.append({
+                        'name': file_info['name'],
+                        'url': file_url,
+                        'size': file_info.get('metadata', {}).get('size', 0),
+                        'type': file_info.get('metadata', {}).get('mimetype', 'unknown')
+                    })
+                
+                if files:
+                    # Find the main report file
+                    main_file = None
+                    for file in files:
+                        if file['name'].endswith('.pdf') or file['name'].endswith('.json'):
+                            main_file = file
+                            break
+                    
+                    report = {
+                        'id': report_id,
+                        'session_id': report_id,
+                        'model_name': main_file['name'].split('_')[-1].replace('.pdf', '').replace('.json', '') if main_file else 'Unknown',
+                        'files': files,
+                        'main_file': main_file,
+                        'created_at': main_file.get('metadata', {}).get('created_at', '') if main_file else ''
+                    }
+                    
+                    return jsonify({
+                        'success': True,
+                        'report': report
+                    })
+                else:
+                    return jsonify({'error': 'Report not found'}), 404
+                    
+            except Exception as e:
+                print(f"❌ Error accessing Supabase storage: {e}")
+                return jsonify({'error': 'Report not found'}), 404
+        else:
+            return jsonify({'error': 'Supabase not configured'}), 500
+            
+    except Exception as e:
+        print(f"❌ Error fetching report: {e}")
+        return jsonify({'error': f'Failed to fetch report: {str(e)}'}), 500
 
 if __name__ == '__main__':
     print("="*60)

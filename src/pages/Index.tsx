@@ -7,7 +7,6 @@ import GitHubSection from "@/components/GitHubSection";
 import AboutSection from "@/components/AboutSection";
 import FooterSection from "@/components/FooterSection";
 import SectionDivider from "@/components/SectionDivider";
-
 const Index = () => {
   return (
     <div className="relative min-h-screen font-inter overflow-x-hidden text-white">
@@ -46,19 +45,19 @@ const Index = () => {
       {/* 🔹 All Home Page Sections */}
       <div className="relative z-10">
         <HeroSection />
-        <SectionDivider />
+        <SectionDivider/>
         <FeaturesSection />
-        <SectionDivider />
+        <SectionDivider/>
         <DemoSection />
-        <SectionDivider />
-        <FlowChartSection />
-        <SectionDivider />
-        <WhyItMattersSection />
-        <SectionDivider />
-        <GitHubSection />
-        <SectionDivider />
+        <SectionDivider/>
+        <FlowChartSection/>
+        <SectionDivider/>
+        <WhyItMattersSection/>
+        <SectionDivider/>
+        <GitHubSection/>
+        <SectionDivider/>
         <AboutSection />
-        <FooterSection />
+        <FooterSection/>
       </div>
     </div>
   );
