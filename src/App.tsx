@@ -14,12 +14,14 @@ import FairsightPage from "./pages/FairsightPage";
 
 const queryClient = new QueryClient();
 
-
+console.log("🚀 App component loading...");
 
 // 🔵 Wrapper to add background video only on home route
 const RouteWithVideo = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const showVideo = location.pathname === "/";
+
+  console.log("📍 Current route:", location.pathname);
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
