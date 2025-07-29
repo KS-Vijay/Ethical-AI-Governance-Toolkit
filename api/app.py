@@ -25,6 +25,7 @@ import seaborn as sns
 from PIL import Image
 from dotenv import load_dotenv
 import uuid
+import logging
 
 # Load environment variables from .env file
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -44,13 +45,15 @@ try:
     from cli_toolkit.generate_fingerprint import DatasetFingerprinter
     from cli_toolkit.analyze_bias import BiasAnalyzer
     from api_verification import api_verification_bp
-    print("✅ Successfully imported all modules")
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    logger.info("✅ Successfully imported all modules")
 except ImportError as e:
-    print(f"❌ Warning: Could not import modules: {e}")
-    print(f"Current directory: {current_dir}")
-    print(f"Parent directory: {parent_dir}")
-    print(f"Python path: {sys.path}")
-    print("Please ensure the modules are available in cli_toolkit and badge_generator folders")
+    logger.error(f"❌ Warning: Could not import modules: {e}")
+    logger.error(f"Current directory: {current_dir}")
+    logger.error(f"Parent directory: {parent_dir}")
+    logger.error(f"Python path: {sys.path}")
+    logger.error("Please ensure the modules are available in cli_toolkit and badge_generator folders")
 
 # Supabase integration
 try:
@@ -59,7 +62,7 @@ try:
         import websockets.asyncio
     except ImportError:
         # If websockets.asyncio is not available, try to install it or use a fallback
-        print("⚠️ websockets.asyncio not available, trying alternative import...")
+        logger.warning("⚠️ websockets.asyncio not available, trying alternative import...")
         import asyncio
         import websockets
         # Monkey patch if needed
@@ -72,17 +75,17 @@ try:
     
     if supabase_url and supabase_key:
         supabase: Client = create_client(supabase_url, supabase_key)
-        print("✅ Supabase client initialized")
+        logger.info("✅ Supabase client initialized")
     else:
-        print("⚠️ Supabase credentials not found. Registry features will be limited.")
+        logger.warning("⚠️ Supabase credentials not found. Registry features will be limited.")
         supabase = None
 except ImportError as e:
-    print(f"⚠️ Supabase library not available: {e}")
-    print("Registry features will be limited. Install with: pip install supabase")
+    logger.warning(f"⚠️ Supabase library not available: {e}")
+    logger.warning("Registry features will be limited. Install with: pip install supabase")
     supabase = None
 except Exception as e:
-    print(f"⚠️ Error initializing Supabase: {e}")
-    print("Registry features will be limited.")
+    logger.warning(f"⚠️ Error initializing Supabase: {e}")
+    logger.warning("Registry features will be limited.")
     supabase = None
 
 app = Flask(__name__)
@@ -93,7 +96,7 @@ app.register_blueprint(api_verification_bp)
 app.config.update({
     'UPLOAD_FOLDER': 'uploads',
     'RESULTS_FOLDER': 'results',
-    'MAX_CONTENT_LENGTH': 16 * 1024 * 1024,  # 16MB max file size
+    'MAX_CONTENT_LENGTH': 100 * 1024 * 1024,  # 16MB max file size
     'ALLOWED_EXTENSIONS': {'csv', 'xlsx', 'xls', 'json', 'parquet'}
 })
 
@@ -119,7 +122,7 @@ def health_check():
             # Try a simple operation to verify the client is working
             supabase_available = True
         except Exception as e:
-            print(f"⚠️ Supabase client error: {e}")
+            logger.warning(f"⚠️ Supabase client error: {e}")
             supabase_available = False
     
     return jsonify({
@@ -170,6 +173,7 @@ def upload_file():
         })
         
     except Exception as e:
+        logger.error(f"❌ Upload failed: {str(e)}")
         return jsonify({'error': f'Upload failed: {str(e)}'}), 500
 
 @app.route('/api/badge/generate', methods=['POST'])
@@ -191,10 +195,10 @@ def generate_badge():
         threshold = data.get('threshold', 60)
         overall_score = data.get('overall_score')  # Optional overall score
         
-        print(f"Generating badge for model: {model_name}")
-        print(f"Category scores: {category_scores}")
+        logger.info(f"Generating badge for model: {model_name}")
+        logger.info(f"Category scores: {category_scores}")
         if overall_score is not None:
-            print(f"Using provided overall score: {overall_score}")
+            logger.info(f"Using provided overall score: {overall_score}")
         
         # Validate category scores
         required_categories = ['bias_fairness', 'transparency', 'privacy', 
@@ -209,10 +213,10 @@ def generate_badge():
                 return jsonify({'error': f'Invalid score for {category}: must be 0-100'}), 400
         
         # Generate badge
-        print("Creating EthicalBadgeGenerator instance...")
+        logger.info("Creating EthicalBadgeGenerator instance...")
         generator = EthicalBadgeGenerator()
         
-        print("Generating badge data...")
+        logger.info("Generating badge data...")
         badge_data = generator.generate_badge_data(model_name, category_scores, threshold, overall_score)
         
         # Create session folder for results
@@ -220,7 +224,7 @@ def generate_badge():
         results_folder = os.path.join(app.config['RESULTS_FOLDER'], session_id)
         os.makedirs(results_folder, exist_ok=True)
         
-        print(f"Saving badge to: {results_folder}")
+        logger.info(f"Saving badge to: {results_folder}")
         # Save badge files
         saved_files = generator.save_badge(badge_data, results_folder, 
                                          formats=['png', 'svg', 'json'])
@@ -233,7 +237,7 @@ def generate_badge():
                 badge_image_base64 = base64.b64encode(img_file.read()).decode('utf-8')
         
         # Prepare response
-        print("✅ Badge generation completed successfully")
+        logger.info("✅ Badge generation completed successfully")
         
         # Convert pandas/numpy types to native Python types for JSON serialization
         def convert_to_serializable(obj):
@@ -270,8 +274,8 @@ def generate_badge():
         
     except Exception as e:
         import traceback
-        print(f"❌ Badge generation failed: {str(e)}")
-        print(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"❌ Badge generation failed: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({'error': f'Badge generation failed: {str(e)}'}), 500
 
 @app.route('/api/fingerprint/generate', methods=['POST'])
@@ -286,8 +290,8 @@ def generate_fingerprint():
         session_id = data['session_id']
         session_folder = os.path.join(app.config['UPLOAD_FOLDER'], session_id)
         
-        print(f"Generating fingerprint for session: {session_id}")
-        print(f"Session folder: {session_folder}")
+        logger.info(f"Generating fingerprint for session: {session_id}")
+        logger.info(f"Session folder: {session_folder}")
         
         if not os.path.exists(session_folder):
             return jsonify({'error': 'Invalid session ID'}), 400
@@ -298,23 +302,23 @@ def generate_fingerprint():
             return jsonify({'error': 'No dataset file found'}), 400
         
         dataset_file = os.path.join(session_folder, files[0])
-        print(f"Dataset file: {dataset_file}")
+        logger.info(f"Dataset file: {dataset_file}")
         
         # Generate fingerprint using existing class
-        print("Creating DatasetFingerprinter instance...")
+        logger.info("Creating DatasetFingerprinter instance...")
         fingerprinter = DatasetFingerprinter(dataset_file)
         
-        print("Loading dataset...")
+        logger.info("Loading dataset...")
         fingerprinter.load_dataset()
         
-        print("Generating fingerprint...")
+        logger.info("Generating fingerprint...")
         fingerprint_data = fingerprinter.generate_fingerprint()
         
         # Create results folder
         results_folder = os.path.join(app.config['RESULTS_FOLDER'], session_id)
         os.makedirs(results_folder, exist_ok=True)
         
-        print(f"Saving fingerprint to: {results_folder}")
+        logger.info(f"Saving fingerprint to: {results_folder}")
         # Save fingerprint
         json_path = fingerprinter.save_fingerprint(
             os.path.join(results_folder, 'fingerprint.json'))
@@ -337,7 +341,7 @@ def generate_fingerprint():
             'generated_at': fingerprint_data['fingerprint_info']['generated_at']
         }
         
-        print("✅ Fingerprint generation completed successfully")
+        logger.info("✅ Fingerprint generation completed successfully")
         
         # Convert pandas/numpy types to native Python types for JSON serialization
         def convert_to_serializable(obj):
@@ -368,8 +372,8 @@ def generate_fingerprint():
         
     except Exception as e:
         import traceback
-        print(f"❌ Fingerprint generation failed: {str(e)}")
-        print(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"❌ Fingerprint generation failed: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({'error': f'Fingerprint generation failed: {str(e)}'}), 500
 
 @app.route('/api/bias/analyze', methods=['POST'])
@@ -387,10 +391,10 @@ def analyze_bias():
         
         session_folder = os.path.join(app.config['UPLOAD_FOLDER'], session_id)
         
-        print(f"Analyzing bias for session: {session_id}")
-        print(f"Session folder: {session_folder}")
-        print(f"Protected attributes: {protected_attributes}")
-        print(f"Target column: {target_column}")
+        logger.info(f"Analyzing bias for session: {session_id}")
+        logger.info(f"Session folder: {session_folder}")
+        logger.info(f"Protected attributes: {protected_attributes}")
+        logger.info(f"Target column: {target_column}")
         
         if not os.path.exists(session_folder):
             return jsonify({'error': 'Invalid session ID'}), 400
@@ -401,10 +405,10 @@ def analyze_bias():
             return jsonify({'error': 'No dataset file found'}), 400
         
         dataset_file = os.path.join(session_folder, files[0])
-        print(f"Dataset file: {dataset_file}")
+        logger.info(f"Dataset file: {dataset_file}")
         
         # Load dataset with robust error handling
-        print("Loading dataset...")
+        logger.info("Loading dataset...")
         try:
             if dataset_file.endswith('.csv'):
                 # Try different encoding options for CSV files
@@ -417,7 +421,7 @@ def analyze_bias():
                     except UnicodeDecodeError:
                         continue
                     except Exception as e:
-                        print(f"Failed to read with encoding {encoding}: {e}")
+                        logger.warning(f"Failed to read with encoding {encoding}: {e}")
                         continue
                 
                 if df is None:
@@ -433,14 +437,14 @@ def analyze_bias():
             else:
                 return jsonify({'error': 'Unsupported file format for bias analysis'}), 400
         except Exception as e:
-            print(f"Error loading dataset: {e}")
+            logger.error(f"Error loading dataset: {e}")
             return jsonify({'error': f'Failed to load dataset: {str(e)}'}), 500
         
         # Ensure we have a valid DataFrame
         if df is None or df.empty:
             return jsonify({'error': 'Dataset is empty or could not be loaded'}), 500
         
-        print(f"Dataset loaded: {df.shape[0]} rows, {df.shape[1]} columns")
+        logger.info(f"Dataset loaded: {df.shape[0]} rows, {df.shape[1]} columns")
         
         # Clean the DataFrame - remove completely empty rows and columns
         df = df.dropna(how='all').dropna(axis=1, how='all')
@@ -449,100 +453,110 @@ def analyze_bias():
         if df.empty:
             return jsonify({'error': 'Dataset is empty after cleaning'}), 500
         
-        print(f"Dataset after cleaning: {df.shape[0]} rows, {df.shape[1]} columns")
+        logger.info(f"Dataset after cleaning: {df.shape[0]} rows, {df.shape[1]} columns")
         
         # Auto-detect protected attributes if not provided
         if not protected_attributes:
             try:
                 protected_attributes = auto_detect_protected_attributes(df)
-                print(f"Auto-detected protected attributes: {protected_attributes}")
+                logger.info(f"Auto-detected protected attributes: {protected_attributes}")
                 # Limit to a reasonable number of protected attributes to avoid issues
                 if len(protected_attributes) > 5:
-                    print(f"Too many protected attributes detected ({len(protected_attributes)}), limiting to 5")
+                    logger.warning(f"Too many protected attributes detected ({len(protected_attributes)}), limiting to 5")
                     protected_attributes = protected_attributes[:5]
             except Exception as e:
-                print(f"Error in auto-detecting protected attributes: {e}")
+                logger.error(f"Error in auto-detecting protected attributes: {e}")
                 protected_attributes = []  # Fallback to empty list
         
         # Auto-detect target column if not provided
         if not target_column:
             try:
                 target_column = auto_detect_target_column(df)
-                print(f"Auto-detected target column: {target_column}")
+                logger.info(f"Auto-detected target column: {target_column}")
                 # If the target column is one of the protected attributes, remove it
                 if target_column in protected_attributes:
-                    print(f"Target column '{target_column}' is also a protected attribute, removing from protected attributes")
+                    logger.warning(f"Target column '{target_column}' is also a protected attribute, removing from protected attributes")
                     protected_attributes = [attr for attr in protected_attributes if attr != target_column]
             except Exception as e:
-                print(f"Error in auto-detecting target column: {e}")
+                logger.error(f"Error in auto-detecting target column: {e}")
                 target_column = None  # Fallback to None
         
         # Initialize bias analyzer with existing class
-        print("Creating BiasAnalyzer instance...")
+        logger.info("Creating BiasAnalyzer instance...")
         try:
             analyzer = BiasAnalyzer(df, target_col=target_column, 
                                    protected_attributes=protected_attributes)
-            print(f"✅ BiasAnalyzer created with target_col={target_column}, protected_attributes={protected_attributes}")
+            logger.info(f"✅ BiasAnalyzer created with target_col={target_column}, protected_attributes={protected_attributes}")
         except Exception as e:
-            print(f"Error creating BiasAnalyzer: {e}")
+            logger.error(f"Error creating BiasAnalyzer: {e}")
             # Fallback: create analyzer without target or protected attributes
             try:
                 analyzer = BiasAnalyzer(df, target_col=None, protected_attributes=[])
-                print("✅ BiasAnalyzer created with fallback settings")
+                logger.info("✅ BiasAnalyzer created with fallback settings")
             except Exception as e2:
-                print(f"Fallback BiasAnalyzer creation also failed: {e2}")
+                logger.error(f"Fallback BiasAnalyzer creation also failed: {e2}")
                 # Final fallback: create with minimal settings
                 analyzer = BiasAnalyzer(df, target_col=None, protected_attributes=[])
-                print("✅ BiasAnalyzer created with minimal settings")
+                logger.info("✅ BiasAnalyzer created with minimal settings")
         
         # Create results folder
         results_folder = os.path.join(app.config['RESULTS_FOLDER'], session_id)
         os.makedirs(results_folder, exist_ok=True)
         
-        print(f"Results folder: {results_folder}")
+        logger.info(f"Results folder: {results_folder}")
         
+<<<<<<< Updated upstream
         # Change to results directory for plot saving
+=======
+        # Ensure results directory exists
+>>>>>>> Stashed changes
         original_dir = os.getcwd()
         os.chdir(results_folder)
         
         try:
-            print("Running bias analysis...")
+            logger.info("Running bias analysis...")
             
             # Run analysis using existing methods with error handling
             try:
                 basic_stats = analyzer.basic_statistics()
-                print("Basic statistics completed")
+                logger.info("Basic statistics completed")
             except Exception as e:
-                print(f"Error in basic statistics: {e}")
+                logger.error(f"Error in basic statistics: {e}")
                 basic_stats = df.describe()  # Fallback to simple describe
             
             try:
                 missing_stats = analyzer.missing_values_analysis()
-                print("Missing values analysis completed")
+                logger.info("Missing values analysis completed")
             except Exception as e:
-                print(f"Error in missing values analysis: {e}")
+                logger.error(f"Error in missing values analysis: {e}")
                 missing_stats = pd.DataFrame()  # Empty DataFrame as fallback
             
             try:
                 imbalance_data = analyzer.detect_class_imbalance()
-                print("Class imbalance detection completed")
+                logger.info("Class imbalance detection completed")
             except Exception as e:
-                print(f"Error in class imbalance detection: {e}")
+                logger.error(f"Error in class imbalance detection: {e}")
                 imbalance_data = {}  # Empty dict as fallback
             
             try:
                 analyzer.protected_attribute_analysis()
-                print("Protected attribute analysis completed")
+                logger.info("Protected attribute analysis completed")
             except Exception as e:
-                print(f"Error in protected attribute analysis: {e}")
+                logger.error(f"Error in protected attribute analysis: {e}")
             
             # Generate visualizations with error handling
             try:
+<<<<<<< Updated upstream
                 print("Generating visualizations...")
                 analyzer.create_bias_visualizations()
                 print("Visualizations completed")
+=======
+                logger.info("Generating visualizations...")
+                analyzer.create_bias_visualizations(output_dir=results_folder)
+                logger.info("Visualizations completed")
+>>>>>>> Stashed changes
             except Exception as e:
-                print(f"Error generating visualizations: {e}")
+                logger.error(f"Error generating visualizations: {e}")
                 # Create simple fallback visualization
                 try:
                     plt.figure(figsize=(10, 6))
@@ -556,51 +570,58 @@ def analyze_bias():
             
             # Generate bias report with error handling
             try:
-                print("Generating bias report...")
+                logger.info("Generating bias report...")
                 bias_report = analyzer.generate_bias_report()
-                print("Bias report completed")
-                print(f"Bias report type: {type(bias_report)}")
-                print(f"Bias report keys: {list(bias_report.keys()) if isinstance(bias_report, dict) else 'Not a dict'}")
+                logger.info("Bias report completed")
+                logger.info(f"Bias report type: {type(bias_report)}")
+                logger.info(f"Bias report keys: {list(bias_report.keys()) if isinstance(bias_report, dict) else 'Not a dict'}")
                 if isinstance(bias_report, dict) and 'bias_score_analysis' in bias_report:
-                    print(f"Bias score analysis in report: {bias_report['bias_score_analysis']}")
-                    print(f"Bias score analysis type: {type(bias_report['bias_score_analysis'])}")
+                    logger.info(f"Bias score analysis in report: {bias_report['bias_score_analysis']}")
+                    logger.info(f"Bias score analysis type: {type(bias_report['bias_score_analysis'])}")
                 else:
-                    print("No bias_score_analysis found in report")
+                    logger.info("No bias_score_analysis found in report")
             except Exception as e:
-                print(f"Error generating bias report: {e}")
+                logger.error(f"Error generating bias report: {e}")
                 import traceback
                 traceback.print_exc()
                 bias_report = {"error": f"Bias report generation failed: {str(e)}"}
             
             # Always calculate bias score directly as backup
-            print("Calculating bias score directly as backup...")
+            logger.info("Calculating bias score directly as backup...")
             try:
                 direct_bias_analysis = analyzer.calculate_bias_score_with_reasoning()
-                print(f"Direct bias analysis result: {direct_bias_analysis}")
+                logger.info(f"Direct bias analysis result: {direct_bias_analysis}")
             except Exception as e:
-                print(f"Direct bias analysis failed: {e}")
+                logger.error(f"Direct bias analysis failed: {e}")
                 direct_bias_analysis = {"bias_score": 50, "bias_level": "UNKNOWN", "reasoning": ["Analysis failed"]}
             
             # Get bias score and reasoning - use direct calculation as primary source
             try:
                 # Use the direct calculation as the primary source
                 bias_analysis = direct_bias_analysis
-                print(f"Using direct bias analysis: {bias_analysis}")
+                logger.info(f"Using direct bias analysis: {bias_analysis}")
                 
                 # Also try to get from the bias report as backup
                 report_bias_analysis = analyzer.bias_report.get('bias_score_analysis', {})
                 if report_bias_analysis and isinstance(report_bias_analysis, dict) and 'bias_score' in report_bias_analysis:
-                    print(f"Also found bias analysis in report: {report_bias_analysis}")
+                    logger.info(f"Also found bias analysis in report: {report_bias_analysis}")
                     # Use report version if it has valid data
                     if report_bias_analysis.get('bias_score', 0) > 0:
                         bias_analysis = report_bias_analysis
                 
-                print(f"Final bias analysis: {bias_analysis}")
-                
+                logger.info(f"Final bias analysis: {bias_analysis}")
+            
             except Exception as e:
-                print(f"Error getting bias analysis: {e}")
+                logger.error(f"Error getting bias analysis: {e}")
                 bias_analysis = {"bias_score": 50, "bias_level": "UNKNOWN", "reasoning": ["Analysis incomplete due to errors"]}
             
+<<<<<<< Updated upstream
+=======
+        except Exception as e:
+            logger.error(f"Error in bias analysis: {e}")
+            import traceback
+            traceback.print_exc()
+>>>>>>> Stashed changes
         finally:
             os.chdir(original_dir)
         
@@ -650,7 +671,7 @@ def analyze_bias():
                 if severe_imbalances > 0:
                     risk_factors.append(f"{severe_imbalances} severely imbalanced features")
         except Exception as e:
-            print(f"Error calculating imbalance risk factors: {e}")
+            logger.error(f"Error calculating imbalance risk factors: {e}")
         
         # Simple check for high missing values - will be handled by convert_to_serializable later
         try:
@@ -659,14 +680,14 @@ def analyze_bias():
                 if high_missing > 0:
                     risk_factors.append(f"{high_missing} columns with >20% missing values")
         except Exception as e:
-            print(f"Error calculating missing values risk factors: {e}")
+            logger.error(f"Error calculating missing values risk factors: {e}")
         
         summary.update({
             'bias_risk_level': risk_level,
             'risk_factors': risk_factors
         })
         
-        print("✅ Bias analysis completed successfully")
+        logger.info("✅ Bias analysis completed successfully")
         
         # Convert pandas/numpy types to native Python types for JSON serialization
         def convert_to_serializable(obj):
@@ -691,7 +712,7 @@ def analyze_bias():
                 else:
                     return str(obj)
             except Exception as e:
-                print(f"Error converting object to serializable: {e}")
+                logger.error(f"Error converting object to serializable: {e}")
                 return str(obj)
         
         # Convert all data to JSON-serializable format
@@ -730,8 +751,8 @@ def analyze_bias():
         
     except Exception as e:
         import traceback
-        print(f"❌ Bias analysis failed: {str(e)}")
-        print(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"❌ Bias analysis failed: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({'error': f'Bias analysis failed: {str(e)}'}), 500
 
 def auto_detect_protected_attributes(df):
@@ -781,10 +802,10 @@ def auto_detect_protected_attributes(df):
                         if any(any(pv in uv for pv in protected_values) for uv in unique_values):
                             protected_attributes.append(col)
                 except Exception as e:
-                    print(f"Error processing column {col} for protected attributes: {e}")
+                    logger.warning(f"Error processing column {col} for protected attributes: {e}")
                     continue
     except Exception as e:
-        print(f"Error in auto_detect_protected_attributes: {e}")
+        logger.error(f"Error in auto_detect_protected_attributes: {e}")
         return []
     
     return list(set(protected_attributes))  # Remove duplicates
@@ -832,14 +853,14 @@ def auto_detect_target_column(df):
                         if len(unique_vals) >= 2:  # At least 2 unique values
                             return col
             except Exception as e:
-                print(f"Error processing column {col} for target detection: {e}")
+                logger.warning(f"Error processing column {col} for target detection: {e}")
                 continue
         
         # If still no target found, return None
         return None
         
     except Exception as e:
-        print(f"Error in auto_detect_target_column: {e}")
+        logger.error(f"Error in auto_detect_target_column: {e}")
         return None
 
 @app.route('/api/report/comprehensive', methods=['POST'])
@@ -1025,6 +1046,7 @@ def generate_comprehensive_report():
         })
         
     except Exception as e:
+        logger.error(f"❌ Report generation failed: {str(e)}")
         return jsonify({'error': f'Report generation failed: {str(e)}'}), 500
 
 @app.route('/api/download/<session_id>/<filename>', methods=['GET'])
@@ -1047,6 +1069,7 @@ def download_file(session_id, filename):
         return send_file(file_path, as_attachment=True, download_name=filename)
         
     except Exception as e:
+        logger.error(f"❌ Download failed: {str(e)}")
         return jsonify({'error': f'Download failed: {str(e)}'}), 500
 
 @app.route('/api/session/<session_id>/files', methods=['GET'])
@@ -1088,6 +1111,7 @@ def list_session_files(session_id):
         })
         
     except Exception as e:
+        logger.error(f"❌ Failed to list files: {str(e)}")
         return jsonify({'error': f'Failed to list files: {str(e)}'}), 500
 
 @app.route('/api/cleanup/<session_id>', methods=['DELETE'])
@@ -1115,19 +1139,10 @@ def cleanup_session(session_id):
         })
         
     except Exception as e:
+        logger.error(f"❌ Cleanup failed: {str(e)}")
         return jsonify({'error': f'Cleanup failed: {str(e)}'}), 500
 
-@app.errorhandler(413)
-def too_large(e):
-    return jsonify({'error': 'File too large'}), 413
 
-@app.errorhandler(404)
-def not_found(e):
-    return jsonify({'error': 'Endpoint not found'}), 404
-
-@app.errorhandler(500)
-def internal_error(e):
-    return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/registry/reports', methods=['GET'])
 def get_registry_reports():
@@ -1194,7 +1209,7 @@ def get_registry_reports():
                 })
                 
             except Exception as e:
-                print(f"❌ Error accessing Supabase storage: {e}")
+                logger.warning(f"❌ Error accessing Supabase storage: {e}")
                 return jsonify({
                     'success': True,
                     'reports': [],
@@ -1209,7 +1224,7 @@ def get_registry_reports():
             })
             
     except Exception as e:
-        print(f"❌ Error fetching reports: {e}")
+        logger.error(f"❌ Error fetching reports: {e}")
         return jsonify({'error': f'Failed to fetch reports: {str(e)}'}), 500
 
 @app.route('/api/registry/report/<report_id>', methods=['GET'])
@@ -1259,14 +1274,31 @@ def get_registry_report(report_id):
                     return jsonify({'error': 'Report not found'}), 404
                     
             except Exception as e:
-                print(f"❌ Error accessing Supabase storage: {e}")
+                logger.warning(f"❌ Error accessing Supabase storage: {e}")
                 return jsonify({'error': 'Report not found'}), 404
         else:
             return jsonify({'error': 'Supabase not configured'}), 500
             
     except Exception as e:
-        print(f"❌ Error fetching report: {e}")
+        logger.error(f"❌ Error fetching report: {e}")
         return jsonify({'error': f'Failed to fetch report: {str(e)}'}), 500
+
+
+@app.errorhandler(413)
+def too_large(e):
+    logger.warning(f"❌ File too large: {e}")
+    return jsonify({'error': 'File too large'}), 413
+
+@app.errorhandler(404)
+def not_found(e):
+    logger.warning(f"❌ Endpoint not found: {e}")
+    return jsonify({'error': 'Endpoint not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    logger.error(f"❌ Internal server error: {e}")
+    return jsonify({'error': 'Internal server error'}), 500
+
 
 if __name__ == '__main__':
     print("="*60)
