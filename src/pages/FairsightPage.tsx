@@ -25,13 +25,13 @@ const FairsightPage = () => {
       <div className="absolute top-6 right-6 z-20 flex gap-4">
         <button
           onClick={() => navigate("/")}
-          className="bg-white hover:bg-gray-200 text-blue-700 font-semibold py-2 px-4 rounded-lg shadow transition"
+          className="bg-gradient-to-r from-gray-800 to-gray-900 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-xl hover:scale-105 transition"
         >
           Home
         </button>
         <button
           onClick={() => navigate("/dashboard")}
-          className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold py-2 px-4 rounded-lg shadow transition hover:scale-105"
+          className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-xl hover:scale-105 transition"
         >
           API Dashboard
         </button>
