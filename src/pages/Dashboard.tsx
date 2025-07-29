@@ -1,42 +1,33 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import RegistryDashboard from "@/components/RegistryDashboard";
-// For a more futuristic feel, consider adding an icon library
-// import { Key, LogOut, Home, Zap } from 'react-feather';
+import { ClipboardCopy } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  
-  // Initialize user data immediately
+
   const initializeUser = () => {
     const userDataString = localStorage.getItem("user");
     const token = localStorage.getItem("token");
 
-    console.log("📦 localStorage user:", userDataString);
-    console.log("🔑 localStorage token:", token ? "exists" : "missing");
-
     if (!userDataString || !token) {
-      // For testing purposes, create a mock user instead of redirecting
-      console.log("No user found in localStorage, creating mock user for testing");
       const mockUser = {
         id: "test-user-id",
         name: "Test User",
         email: "test@example.com",
-        company: "Test Company"
+        company: "Test Company",
       };
-      
-      // Store mock user in localStorage for consistency
       localStorage.setItem("user", JSON.stringify(mockUser));
       localStorage.setItem("token", "mock-token-for-testing");
-      
       return mockUser;
     } else {
       const userData = JSON.parse(userDataString);
       return {
-        id: userData.id || userData.email, // Use email as fallback ID
+        id: userData.id || userData.email,
         name: userData.name,
         email: userData.email,
-        company: userData.company
+        company: userData.company,
       };
     }
   };
@@ -46,21 +37,6 @@ export default function Dashboard() {
   const [loadingKey, setLoadingKey] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'registry'>('dashboard');
 
-  console.log("🎯 Dashboard component rendering, user:", user, "activeTab:", activeTab);
-
-  // Simple fallback to test if React is working
-  if (!user.id) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Loading Dashboard...</h1>
-          <p className="text-gray-400">User data is being initialized</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Handle API key generation (functionality unchanged)
   const handleGenerateApiKey = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -89,35 +65,48 @@ export default function Dashboard() {
     setLoadingKey(false);
   };
 
-  // Handle logout (functionality unchanged)
   const handleLogout = () => {
     localStorage.clear();
     navigate("/login");
   };
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(apiKey);
+    toast.success("API Key copied to clipboard!");
+  };
+
+  if (!user.id) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Loading Dashboard...</h1>
+          <p className="text-gray-400">User data is being initialized</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen bg-gray-900 text-gray-200 font-sans overflow-hidden">
-      {/* Background Video */}
+      {/* 🎬 Background Video */}
       <video
         autoPlay
         loop
         muted
         className="absolute top-0 left-0 w-full h-full object-cover z-0"
-        onError={(e) => console.error("❌ Video loading error:", e)}
-        onLoadStart={() => console.log("🎬 Video loading started")}
-        onCanPlay={() => console.log("✅ Video can play")}
       >
-        {/* Place your video file in the `public` folder */}
         <source src="/V.mp4" type="video/mp4" />
         Your browser does not support the video tag.
       </video>
-      
-      {/* Overlay to darken the video */}
+
+      {/* Dark overlay */}
       <div className="absolute top-0 left-0 w-full h-full bg-black opacity-50 z-10"></div>
 
-      {/* Main Container - positioned above the video */}
+      {/* Main UI layer */}
       <div className="relative z-20">
-        {/* Top Nav - Glassmorphism Effect */}
+        <Toaster position="top-right" reverseOrder={false} />
+
+        {/* 🔷 Top Navbar */}
         <nav className="w-full bg-white/5 backdrop-blur-md shadow-lg shadow-cyan-500/10 py-4 px-8 flex justify-between items-center border-b border-cyan-400/20">
           <h1 className="text-xl font-bold text-cyan-400 drop-shadow-[0_0_5px_rgba(0,255,255,0.4)]">
             FAIRSIGHT
@@ -130,21 +119,21 @@ export default function Dashboard() {
               Home
             </button>
             <button
-              onClick={() => setActiveTab('dashboard')}
+              onClick={() => setActiveTab("dashboard")}
               className={`transition-colors duration-300 ${
-                activeTab === 'dashboard' 
-                  ? 'text-cyan-400 border-b-2 border-cyan-400' 
-                  : 'text-gray-300 hover:text-cyan-400'
+                activeTab === "dashboard"
+                  ? "text-cyan-400 border-b-2 border-cyan-400"
+                  : "text-gray-300 hover:text-cyan-400"
               }`}
             >
               Dashboard
             </button>
             <button
-              onClick={() => setActiveTab('registry')}
+              onClick={() => setActiveTab("registry")}
               className={`transition-colors duration-300 ${
-                activeTab === 'registry' 
-                  ? 'text-cyan-400 border-b-2 border-cyan-400' 
-                  : 'text-gray-300 hover:text-cyan-400'
+                activeTab === "registry"
+                  ? "text-cyan-400 border-b-2 border-cyan-400"
+                  : "text-gray-300 hover:text-cyan-400"
               }`}
             >
               Fairsight Registry
@@ -164,47 +153,58 @@ export default function Dashboard() {
           </div>
         </nav>
 
-        {/* Main Content Card - Glassmorphism Effect */}
-        {activeTab === 'dashboard' ? (
+        {/* 🔽 Main Section */}
+        {activeTab === "dashboard" ? (
           <main className="max-w-3xl mx-auto mt-16 bg-gray-900/40 backdrop-blur-xl shadow-2xl shadow-cyan-500/10 rounded-xl p-8 border border-cyan-300/20">
             <h2 className="text-3xl font-bold text-center mb-6">
-              Welcome, <span className="text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]">{user.name}</span>
+              Welcome,{" "}
+              <span className="text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]">
+                {user.name}
+              </span>
             </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-300 mb-8 border-t border-b border-cyan-400/10 py-6">
-            <div className="bg-white/5 p-4 rounded-lg">
-              <p className="font-semibold text-cyan-400 text-sm">📧 Email</p>
-              <p className="font-mono">{user.email}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-300 mb-8 border-t border-b border-cyan-400/10 py-6">
+              <div className="bg-white/5 p-4 rounded-lg">
+                <p className="font-semibold text-cyan-400 text-sm">📧 Email</p>
+                <p className="font-mono">{user.email}</p>
+              </div>
+              <div className="bg-white/5 p-4 rounded-lg">
+                <p className="font-semibold text-cyan-400 text-sm">🏢 Company</p>
+                <p className="font-mono">{user.company}</p>
+              </div>
             </div>
-            <div className="bg-white/5 p-4 rounded-lg">
-              <p className="font-semibold text-cyan-400 text-sm">🏢 Company</p>
-              <p className="font-mono">{user.company}</p>
-            </div>
-          </div>
 
-          <div className="mt-8">
-            <p className="font-semibold text-gray-200 mb-2">🔑 Your Secure API Key</p>
-            <div className="relative">
+            <div className="mt-8">
+              <p className="font-semibold text-gray-200 mb-2">
+                🔑 Your Secure API Key
+              </p>
+              <div className="relative flex items-center">
                 <input
-                    readOnly
-                    value={apiKey}
-                    className="w-full p-3 border-2 border-cyan-400/30 rounded-md bg-gray-900/80 text-center font-mono text-lg text-lime-300 tracking-wider focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+                  readOnly
+                  value={apiKey}
+                  className="w-full p-3 pr-12 border-2 border-cyan-400/30 rounded-md bg-gray-900/80 text-center font-mono text-lg text-lime-300 tracking-wider focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
                 />
+                <button
+                  onClick={handleCopy}
+                  className="absolute right-3 text-cyan-400 hover:text-white transition duration-200"
+                  aria-label="Copy API key"
+                >
+                  <ClipboardCopy size={20} />
+                </button>
+              </div>
+              <button
+                onClick={handleGenerateApiKey}
+                disabled={loadingKey}
+                className="mt-4 w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold px-4 py-3 rounded-md hover:from-cyan-400 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-cyan-500/50"
+              >
+                {loadingKey ? "Generating..." : "Generate New Key"}
+              </button>
             </div>
-            <button
-              onClick={handleGenerateApiKey}
-              disabled={loadingKey}
-              className="mt-4 w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold px-4 py-3 rounded-md hover:from-cyan-400 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-cyan-500/50"
-            >
-              {loadingKey ? "Generating..." : "Generate New Key"}
-            </button>
-          </div>
 
-          {/* Future Section */}
-          <div className="mt-10 text-center text-gray-500 text-sm italic">
-            📊 Previous Reports section initializing soon...
-          </div>
-        </main>
+            <div className="mt-10 text-center text-gray-500 text-sm italic">
+            
+            </div>
+          </main>
         ) : (
           <div className="mt-16">
             <RegistryDashboard user={user} />
