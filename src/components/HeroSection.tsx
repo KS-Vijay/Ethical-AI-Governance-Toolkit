@@ -19,6 +19,7 @@ const HeroSection = () => (
           SIGHT
         </span>
       </motion.h1>
+
       <motion.h1
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
@@ -42,14 +43,26 @@ const HeroSection = () => (
         checks, transparency, and real accountability.
       </motion.p>
 
-      <motion.a
-        href="#demo"
-        whileHover={{ scale: 1.06 }}
-        whileTap={{ scale: 0.98 }}
-        className="bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 rounded-lg font-semibold text-white text-lg shadow-lg transition-all focus:ring-2 focus:ring-blue-500 hover:shadow-xl"
+      {/* 🔵 Buttons with spacing */}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.25 }}
+        className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6"
       >
-        Try the Toolkit
-      </motion.a>
+        <a
+          href="#demo"
+          className="bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 rounded-lg font-semibold text-white text-lg shadow-lg transition-all focus:ring-2 focus:ring-blue-500 hover:shadow-xl"
+        >
+          Try the Toolkit
+        </a>
+        <a
+          href="/fairsight"
+          className="bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 rounded-lg font-semibold text-white text-lg shadow-lg transition-all focus:ring-2 focus:ring-blue-500 hover:shadow-xl"
+        >
+           Fairsight Library
+        </a>
+      </motion.div>
     </div>
   </section>
 );
