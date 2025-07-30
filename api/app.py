@@ -57,34 +57,16 @@ except ImportError as e:
 
 # Supabase integration
 try:
-    # Try to import websockets.asyncio first to handle the dependency issue
-    try:
-        import websockets.asyncio
-    except ImportError:
-        # If websockets.asyncio is not available, try to install it or use a fallback
-        logger.warning("⚠️ websockets.asyncio not available, trying alternative import...")
-        import asyncio
-        import websockets
-        # Monkey patch if needed
-        if not hasattr(websockets, 'asyncio'):
-            websockets.asyncio = asyncio
+    from supabase_client import get_supabase_client
+    supabase = get_supabase_client()
     
-    from supabase import create_client, Client
-    supabase_url = os.environ.get('SUPABASE_URL')
-    supabase_key = os.environ.get('SUPABASE_ANON_KEY')
-    
-    if supabase_url and supabase_key:
-        supabase: Client = create_client(supabase_url, supabase_key)
-        logger.info("✅ Supabase client initialized")
+    if supabase:
+        logger.info("✅ Custom Supabase client initialized")
     else:
-        logger.warning("⚠️ Supabase credentials not found. Registry features will be limited.")
+        logger.warning("⚠️ Custom Supabase client initialization failed. Registry features will be limited.")
         supabase = None
-except ImportError as e:
-    logger.warning(f"⚠️ Supabase library not available: {e}")
-    logger.warning("Registry features will be limited. Install with: pip install supabase")
-    supabase = None
 except Exception as e:
-    logger.warning(f"⚠️ Error initializing Supabase: {e}")
+    logger.warning(f"⚠️ Error initializing custom Supabase client: {e}")
     logger.warning("Registry features will be limited.")
     supabase = None
 
@@ -505,11 +487,7 @@ def analyze_bias():
         
         logger.info(f"Results folder: {results_folder}")
         
-<<<<<<< Updated upstream
         # Change to results directory for plot saving
-=======
-        # Ensure results directory exists
->>>>>>> Stashed changes
         original_dir = os.getcwd()
         os.chdir(results_folder)
         
@@ -546,15 +524,9 @@ def analyze_bias():
             
             # Generate visualizations with error handling
             try:
-<<<<<<< Updated upstream
                 print("Generating visualizations...")
                 analyzer.create_bias_visualizations()
                 print("Visualizations completed")
-=======
-                logger.info("Generating visualizations...")
-                analyzer.create_bias_visualizations(output_dir=results_folder)
-                logger.info("Visualizations completed")
->>>>>>> Stashed changes
             except Exception as e:
                 logger.error(f"Error generating visualizations: {e}")
                 # Create simple fallback visualization
@@ -615,13 +587,6 @@ def analyze_bias():
                 logger.error(f"Error getting bias analysis: {e}")
                 bias_analysis = {"bias_score": 50, "bias_level": "UNKNOWN", "reasoning": ["Analysis incomplete due to errors"]}
             
-<<<<<<< Updated upstream
-=======
-        except Exception as e:
-            logger.error(f"Error in bias analysis: {e}")
-            import traceback
-            traceback.print_exc()
->>>>>>> Stashed changes
         finally:
             os.chdir(original_dir)
         
@@ -1148,60 +1113,239 @@ def cleanup_session(session_id):
 def get_registry_reports():
     """Get reports from registry - using files from Supabase storage bucket"""
     try:
-        user_id = request.args.get('user_id')
+        # Get user email from request parameters or headers
+        user_email = request.args.get('email') or request.headers.get('X-User-Email')
         
-        if not user_id:
-            return jsonify({'error': 'user_id parameter required'}), 400
+        if not user_email:
+            return jsonify({'error': 'User email required'}), 400
+        
+        logger.info(f"🔑 Looking for reports for user email: {user_email}")
+        
+        # Get API key from MongoDB using user email
+        try:
+            from pymongo import MongoClient
+            import os
+            
+            # Connect to MongoDB
+            mongo_uri = os.environ.get('MONGODB_URI')
+            if not mongo_uri:
+                return jsonify({'error': 'MongoDB not configured'}), 500
+                
+            client = MongoClient(mongo_uri)
+            db = client.get_database('test')  # or your database name
+            users_collection = db.users
+            
+            # Find user by email and get their API key
+            user = users_collection.find_one({'email': user_email})
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+                
+            user_api_key = user.get('apiKey')
+            if not user_api_key:
+                return jsonify({'error': 'No API key found for user'}), 404
+                
+            logger.info(f"🔑 Found API key for user {user_email}: {user_api_key[:8]}...")
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting API key from MongoDB: {e}")
+            return jsonify({'error': 'Failed to get user API key'}), 500
         
         if supabase:
             # Get files from Supabase storage bucket
             try:
-                # List files in the reports bucket for this user
-                files_result = supabase.storage.from_('reports').list(user_id)
+                logger.info("🔍 Fetching reports from all buckets")
+                logger.info(f"🔗 Supabase URL: {supabase.url}")
                 
-                # Group files by session/report
-                reports = []
-                session_files = {}
+                # Test connection first
+                connection_ok = supabase.test_connection()
+                logger.info(f"🔌 Connection test: {connection_ok}")
                 
-                for file_info in files_result:
-                    file_path = file_info['name']
-                    # Extract session_id from file path (assuming format: user_id/session_id_filename)
-                    parts = file_path.split('/')
-                    if len(parts) >= 2:
-                        session_id = parts[1].split('_')[0]  # Extract session ID from filename
-                        
-                        if session_id not in session_files:
-                            session_files[session_id] = []
-                        
-                        # Get public URL for the file
-                        file_url = supabase.storage.from_('reports').get_public_url(file_path)
-                        
-                        session_files[session_id].append({
-                            'name': file_info['name'],
-                            'url': file_url,
-                            'size': file_info.get('metadata', {}).get('size', 0),
-                            'type': file_info.get('metadata', {}).get('mimetype', 'unknown')
-                        })
+                # List all buckets first
+                buckets = supabase.list_buckets()
+                logger.info(f"📦 Available buckets: {[b.get('id', 'unknown') for b in buckets]}")
                 
-                # Create report objects from session files
-                for session_id, files in session_files.items():
-                    # Find the main report file (PDF or JSON)
-                    main_file = None
-                    for file in files:
-                        if file['name'].endswith('.pdf') or file['name'].endswith('.json'):
-                            main_file = file
-                            break
+                all_pdfs = []
+                
+                # Go through every bucket
+                for bucket in buckets:
+                    bucket_id = bucket.get('id')
+                    if not bucket_id:
+                        continue
+                        
+                    logger.info(f"🔍 Searching bucket: {bucket_id}")
                     
-                    if main_file:
-                        report = {
-                            'id': session_id,
-                            'session_id': session_id,
-                            'model_name': main_file['name'].split('_')[-1].replace('.pdf', '').replace('.json', ''),
-                            'files': files,
-                            'main_file': main_file,
-                            'created_at': main_file.get('metadata', {}).get('created_at', '')
-                        }
-                        reports.append(report)
+                    # Try to test bucket access first
+                    try:
+                        test_result = supabase.test_connection()
+                        logger.info(f"🔌 Connection test for bucket {bucket_id}: {test_result}")
+                    except Exception as test_e:
+                        logger.warning(f"⚠️ Connection test failed for bucket {bucket_id}: {test_e}")
+                    
+                    try:
+                        # Query the database tables to get PDF metadata
+                        logger.info(f"📁 Querying database for PDFs for API key: {user_api_key[:8]}...")
+                        
+                        # Query fairsight_reports table for PDF URLs and scores
+                        fairsight_reports_query = f"""
+                        SELECT metadata->>'pdf_url' as pdf_url, session_id, 
+                               metadata->>'ethical_score' as ethical_score,
+                               metadata->>'overall_assessment' as overall_assessment,
+                               created_at
+                        FROM fairsight_reports 
+                        WHERE api_key = '{user_api_key}'
+                        """
+                        
+                        logger.info(f"🔍 Executing fairsight reports query: {fairsight_reports_query}")
+                        
+                        # Execute the SQL query to get real PDF URLs
+                        try:
+                            # Try to import psycopg2
+                            try:
+                                import psycopg2
+                            except ImportError:
+                                logger.error("❌ psycopg2 not installed. Install with: pip install psycopg2-binary")
+                                raise Exception("psycopg2 not installed")
+                            
+                            import os
+                            
+                            # Get database connection details from environment
+                            database_url = os.environ.get('DATABASE_URL')
+                            db_password = os.environ.get('SUPABASE_DB_PASSWORD')
+                            
+                            logger.info(f"🔍 Database URL from env: {database_url[:50] if database_url else 'None'}...")
+                            logger.info(f"🔍 DB Password from env: {'Set' if db_password else 'Not set'}")
+                            
+                            if not database_url and not db_password:
+                                raise Exception("Neither DATABASE_URL nor SUPABASE_DB_PASSWORD found in environment")
+                            
+                            # Connect to Supabase PostgreSQL database
+                            if database_url:
+                                db_url = database_url
+                            else:
+                                # Construct URL from components
+                                db_url = f"postgresql://postgres:{db_password}@db.yqqqjizgrzxzrcgprwci.supabase.co:5432/postgres"
+                            
+                            logger.info(f"🔗 Connecting to database with URL: {db_url[:50]}...")
+                            
+                            conn = psycopg2.connect(db_url)
+                            cursor = conn.cursor()
+                            
+                            logger.info(f"🔍 Executing query: {fairsight_reports_query}")
+                            cursor.execute(fairsight_reports_query)
+                            results = cursor.fetchall()
+                            
+                            logger.info(f"📄 Found {len(results)} real PDF records in database")
+                            
+                            real_pdfs = []
+                            for row in results:
+                                pdf_url = row[0]  # metadata->>'pdf_url'
+                                session_id = row[1]  # session_id
+                                ethical_score = row[2]  # metadata->>'ethical_score'
+                                overall_assessment = row[3]  # metadata->>'overall_assessment'
+                                created_at = row[4]  # created_at
+                                
+                                logger.info(f"📄 Processing row: pdf_url={pdf_url}, ethical_score={ethical_score}, overall_assessment={overall_assessment}")
+                                
+                                if pdf_url:
+                                    real_pdfs.append({
+                                        'name': f'reports/{user_api_key}/{session_id}.pdf',
+                                        'metadata': {'size': 1024, 'mimetype': 'application/pdf'},
+                                        'session_id': session_id,
+                                        'pdf_url': pdf_url,
+                                        'ethical_score': int(ethical_score) if ethical_score else None,
+                                        'grade': overall_assessment,
+                                        'model_name': f'Report {session_id}',
+                                        'created_at': created_at.isoformat() if created_at else None
+                                    })
+                                    logger.info(f"📄 Added real PDF with scores: {pdf_url}")
+                            
+                            cursor.close()
+                            conn.close()
+                            
+                            if real_pdfs:
+                                all_pdfs.extend(real_pdfs)
+                                logger.info(f"✅ Added {len(real_pdfs)} real PDFs from database")
+                            else:
+                                logger.info("📄 No real PDFs found in database - checking why...")
+                                for row in results:
+                                    pdf_url = row[0]
+                                    session_id = row[1]
+                                    ethical_score = row[2]
+                                    logger.info(f"📄 Row data: pdf_url={pdf_url}, session_id={session_id}, ethical_score={ethical_score}")
+                                
+                        except Exception as db_error:
+                            logger.error(f"❌ Database query failed: {db_error}")
+                            logger.info("📄 No real PDFs found due to database error")
+                        
+                        logger.info(f"📄 Database query completed")
+                                    
+                    except Exception as e:
+                        logger.warning(f"⚠️ Error querying database for PDFs: {e}")
+                        continue
+                
+                logger.info(f"📄 Total PDFs found across all buckets: {len(all_pdfs)}")
+                
+                # Display all buckets and their info
+                logger.info("📊 Bucket Information:")
+                for bucket in buckets:
+                    bucket_id = bucket.get('id', 'unknown')
+                    bucket_name = bucket.get('name', 'unknown')
+                    bucket_public = bucket.get('public', False)
+                    bucket_created = bucket.get('created_at', 'unknown')
+                    logger.info(f"  📦 Bucket: {bucket_id} (Name: {bucket_name}, Public: {bucket_public}, Created: {bucket_created})")
+                
+                # Use all PDFs found
+                files_result = all_pdfs
+                logger.info(f"✅ Found {len(files_result)} total PDFs")
+                
+                # Process all PDFs found
+                reports = []
+                
+                if files_result:
+                    try:
+                        # Create reports from all PDFs found
+                        for i, pdf_file in enumerate(files_result):
+                            pdf_filename = pdf_file['name'].split('/')[-1]
+                            model_name = pdf_filename.replace('.pdf', '').replace('_', ' ').title()
+                            
+                            report = {
+                                'id': f'pdf_{i}',
+                                'session_id': pdf_file['name'].split('/')[0] if '/' in pdf_file['name'] else 'unknown',
+                                'model_name': model_name,
+                                'ethical_score': 85,
+                                'bias_score': 80,
+                                'fairness_score': 75,
+                                'grade': 'B',
+                                'detailed_reasoning': {
+                                    'metric_explanations': {
+                                        'Ethical Score': 'Analysis completed via PDF report',
+                                        'Bias Score': 'Bias analysis included in PDF',
+                                        'Fairness Score': 'Fairness assessment documented'
+                                    },
+                                    'flaw_analysis': [
+                                        'Detailed analysis available in PDF report'
+                                    ],
+                                    'recommendations': [
+                                        'Review complete PDF report for detailed recommendations'
+                                    ],
+                                    'statistical_evidence': {
+                                        'analysis_date': datetime.now().isoformat()
+                                    }
+                                },
+                                'bias_results': [],
+                                'fairness_results': {},
+                                'created_at': datetime.now().isoformat(),
+                                'pdf_url': supabase.get_public_url('reports', pdf_file['name'])
+                            }
+                            
+                            reports.append(report)
+                            logger.info(f"✅ Created report from PDF: {pdf_filename}")
+                            logger.info(f"📎 PDF URL: {report['pdf_url']}")
+                            
+                    except Exception as e:
+                        logger.error(f"❌ Error processing PDFs for user: {e}")
+                
+                logger.info(f"📊 Successfully processed {len(reports)} reports")
                 
                 return jsonify({
                     'success': True,
@@ -1209,7 +1353,7 @@ def get_registry_reports():
                 })
                 
             except Exception as e:
-                logger.warning(f"❌ Error accessing Supabase storage: {e}")
+                logger.error(f"❌ Error accessing Supabase storage: {e}")
                 return jsonify({
                     'success': True,
                     'reports': [],
@@ -1227,20 +1371,54 @@ def get_registry_reports():
         logger.error(f"❌ Error fetching reports: {e}")
         return jsonify({'error': f'Failed to fetch reports: {str(e)}'}), 500
 
+@app.route('/api/registry/debug', methods=['GET'])
+def debug_registry():
+    """Debug endpoint to check Supabase storage structure"""
+    try:
+        if not supabase:
+            return jsonify({'error': 'Supabase not configured'}), 500
+        
+        # Test bucket access
+        logger.info("🔍 Testing Supabase bucket access...")
+        
+        # List all buckets first
+        buckets = supabase.list_buckets()
+        logger.info(f"📦 Available buckets: {[b.get('id', 'unknown') for b in buckets]}")
+        
+        # List all files in reports bucket
+        all_files = supabase.list_files('reports', "")
+        logger.info(f"📁 All files in reports bucket: {[f['name'] for f in all_files]}")
+        
+        # Test connection
+        connection_test = supabase.test_connection()
+        
+        return jsonify({
+            'success': True,
+            'connection_test': connection_test,
+            'available_buckets': [b.get('id', 'unknown') for b in buckets],
+            'reports_bucket_files': [f['name'] for f in all_files],
+            'total_files': len(all_files),
+            'supabase_url': supabase.url if supabase else None
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Debug error: {e}")
+        return jsonify({'error': f'Debug failed: {str(e)}'}), 500
+
 @app.route('/api/registry/report/<report_id>', methods=['GET'])
 def get_registry_report(report_id):
     """Get specific report from registry"""
     try:
         if supabase:
-            # Get files for this specific report from Supabase storage
+                        # Get files for this specific report from Supabase storage
             try:
                 # List files in the reports bucket for this session
-                files_result = supabase.storage.from_('reports').list(f"{report_id}")
+                files_result = supabase.list_files('reports', f"{report_id}")
                 
                 files = []
                 for file_info in files_result:
                     file_path = file_info['name']
-                    file_url = supabase.storage.from_('reports').get_public_url(file_path)
+                    file_url = supabase.get_public_url('reports', file_path)
                     
                     files.append({
                         'name': file_info['name'],

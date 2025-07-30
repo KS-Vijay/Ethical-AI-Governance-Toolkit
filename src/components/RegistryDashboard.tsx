@@ -40,6 +40,7 @@ const RegistryDashboard: React.FC<RegistryDashboardProps> = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState<FairsightReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("overview");
 
   useEffect(() => {
     fetchReports();
@@ -50,19 +51,14 @@ const RegistryDashboard: React.FC<RegistryDashboardProps> = ({ user }) => {
       setLoading(true);
       console.log("🔍 Fetching reports for user:", user);
       
-      // Get current user from localStorage as fallback
-      const userId = user.id || user.email;
-      
-      if (!userId) {
-        console.error("❌ No user ID found");
-        setError("User not authenticated");
-        return;
+      // Get current user's email from localStorage or props
+      const userEmail = user.email;
+      if (!userEmail) {
+        throw new Error("No user email found");
       }
 
-      console.log("📡 Making API call to fetch reports for user:", userId);
-      
-      // Call the API endpoint to fetch reports
-      const response = await fetch(`/api/registry/reports?user_id=${encodeURIComponent(userId)}`);
+      // Call the API endpoint to fetch reports with user email
+      const response = await fetch(`http://localhost:5000/api/registry/reports?email=${userEmail}`);
       
       console.log("📥 API Response status:", response.status);
       
@@ -74,40 +70,58 @@ const RegistryDashboard: React.FC<RegistryDashboardProps> = ({ user }) => {
       console.log("📄 API Response data:", data);
       
       if (data.success) {
-        setReports(data.reports || []);
-        console.log("✅ Reports loaded successfully:", data.reports?.length || 0, "reports");
+        // Transform the reports to include proper PDF URLs
+        const transformedReports = (data.reports || []).map((report: any) => ({
+          id: report.id,
+          session_id: report.session_id,
+          model_name: report.model_name,
+          ethical_score: report.ethical_score,
+          detailed_reasoning: report.detailed_reasoning || {
+            metric_explanations: {},
+            flaw_analysis: [],
+            recommendations: [],
+            statistical_evidence: {}
+          },
+          bias_results: report.bias_results || [],
+          fairness_results: report.fairness_results || {},
+          created_at: report.created_at,
+          pdf_url: report.pdf_url || null
+        }));
+        
+        setReports(transformedReports);
+        console.log("✅ Reports loaded successfully:", transformedReports.length, "reports");
       } else {
         throw new Error(data.error || 'Failed to fetch reports');
       }
     } catch (err) {
       console.error("❌ Error fetching reports:", err);
-      setError("Failed to load reports");
+      setError("Failed to load reports. Please check your connection.");
     } finally {
       setLoading(false);
     }
   };
 
   const downloadPDF = async (report: FairsightReport) => {
-    if (!report.pdf_url) {
-      toast.error('PDF not available for this report');
-      return;
-    }
-
     try {
-      const response = await fetch(report.pdf_url);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      if (!report.pdf_url) {
+        toast.error('PDF not available for this report');
+        return;
+      }
+
+      // Create a temporary anchor element to trigger the download
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `${report.model_name}_report.pdf`;
+      a.href = report.pdf_url;
+      a.download = `${report.model_name.replace(/\s+/g, '_')}_report.pdf`;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success('PDF downloaded successfully');
+      
+      toast.success('Opening PDF in new tab...');
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      toast.error('Failed to download PDF');
+      toast.error('Failed to open PDF. Please try again.');
     }
   };
 
@@ -160,6 +174,12 @@ const RegistryDashboard: React.FC<RegistryDashboardProps> = ({ user }) => {
             <AlertTriangle className="w-5 h-5" />
             <span>{error}</span>
           </div>
+          <Button 
+            onClick={fetchReports} 
+            className="mt-4 bg-red-600 hover:bg-red-700"
+          >
+            Retry
+          </Button>
         </CardContent>
       </Card>
     );
@@ -183,10 +203,16 @@ const RegistryDashboard: React.FC<RegistryDashboardProps> = ({ user }) => {
             <p className="text-gray-400">
               Submit your first Fairsight audit to see it here.
             </p>
+            <Button 
+              onClick={fetchReports} 
+              className="mt-4 bg-cyan-600 hover:bg-cyan-700"
+            >
+              Refresh
+            </Button>
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="detailed">Detailed View</TabsTrigger>
@@ -211,44 +237,14 @@ const RegistryDashboard: React.FC<RegistryDashboardProps> = ({ user }) => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Scores */}
-                    <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className=" text-center">
                       <div>
                         <div className={`text-2xl font-bold ${getScoreColor(report.ethical_score)}`}>
                           {report.ethical_score}
                         </div>
                         <div className="text-xs text-gray-400">Ethical</div>
                       </div>
-                      <div>
-                        <div className={`text-2xl font-bold ${getScoreColor(report.bias_score)}`}>
-                          {report.bias_score}
-                        </div>
-                        <div className="text-xs text-gray-400">Bias</div>
-                      </div>
-                      <div>
-                        <div className={`text-2xl font-bold ${getScoreColor(report.fairness_score)}`}>
-                          {report.fairness_score}
-                        </div>
-                        <div className="text-xs text-gray-400">Fairness</div>
-                      </div>
                     </div>
-
-                    {/* Issues Summary */}
-                    {report.detailed_reasoning?.flaw_analysis && 
-                     report.detailed_reasoning.flaw_analysis.length > 0 && (
-                      <div className="text-sm">
-                        <div className="flex items-center gap-2 text-red-400 mb-1">
-                          <AlertTriangle className="w-4 h-4" />
-                          <span>{report.detailed_reasoning.flaw_analysis.length} issues</span>
-                        </div>
-                        {report.detailed_reasoning.recommendations && 
-                         report.detailed_reasoning.recommendations.length > 0 && (
-                          <div className="flex items-center gap-2 text-green-400">
-                            <CheckCircle className="w-4 h-4" />
-                            <span>{report.detailed_reasoning.recommendations.length} recommendations</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
 
                     {/* Date */}
                     <div className="text-xs text-gray-400">
@@ -264,25 +260,24 @@ const RegistryDashboard: React.FC<RegistryDashboardProps> = ({ user }) => {
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedReport(report);
+                          setActiveTab("detailed");
                         }}
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         View
                       </Button>
-                      {report.pdf_url && (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="flex-1 border-green-500 text-green-300 hover:bg-green-700"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadPDF(report);
-                          }}
-                        >
-                          <Download className="w-4 h-4 mr-1" />
-                          PDF
-                        </Button>
-                      )}
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 border-green-500 text-green-300 hover:bg-green-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadPDF(report);
+                        }}
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        PDF
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -307,116 +302,49 @@ const RegistryDashboard: React.FC<RegistryDashboardProps> = ({ user }) => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="">
                       <div className="text-center">
                         <div className={`text-4xl font-bold ${getScoreColor(selectedReport.ethical_score)}`}>
                           {selectedReport.ethical_score}/100
                         </div>
                         <div className="text-sm text-gray-400">Overall Ethical Score</div>
                       </div>
-                      <div className="text-center">
-                        <div className={`text-4xl font-bold ${getScoreColor(selectedReport.bias_score)}`}>
-                          {selectedReport.bias_score}/100
-                        </div>
-                        <div className="text-sm text-gray-400">Bias Analysis Score</div>
-                      </div>
-                      <div className="text-center">
-                        <div className={`text-4xl font-bold ${getScoreColor(selectedReport.fairness_score)}`}>
-                          {selectedReport.fairness_score}/100
-                        </div>
-                        <div className="text-sm text-gray-400">Fairness Score</div>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Detailed Analysis */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Flaw Analysis */}
-                  <Card className="bg-[#1b263b]/80 border border-red-500">
+                {/* PDF Preview */}
+                {selectedReport.pdf_url && (
+                  <Card className="bg-[#121e36]/80 border border-cyan-700">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-red-400">
-                        <AlertTriangle className="w-5 h-5" />
-                        Issues Detected
-                      </CardTitle>
+                      <CardTitle className="text-white">Report Preview</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {selectedReport.detailed_reasoning?.flaw_analysis && 
-                       selectedReport.detailed_reasoning.flaw_analysis.length > 0 ? (
-                        <ul className="space-y-2">
-                          {selectedReport.detailed_reasoning.flaw_analysis.map((flaw, index) => (
-                            <li key={index} className="flex items-start gap-2">
-                              <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm text-white">{flaw}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-green-400">No critical issues detected</p>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Recommendations */}
-                  <Card className="bg-[#1b263b]/80 border border-green-500">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-green-400">
-                        <CheckCircle className="w-5 h-5" />
-                        Recommendations
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {selectedReport.detailed_reasoning?.recommendations && 
-                       selectedReport.detailed_reasoning.recommendations.length > 0 ? (
-                        <ul className="space-y-2">
-                          {selectedReport.detailed_reasoning.recommendations.map((rec, index) => (
-                            <li key={index} className="flex items-start gap-2">
-                              <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm text-white">{rec}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-gray-400">No specific recommendations</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Metric Explanations */}
-                {selectedReport.detailed_reasoning?.metric_explanations && 
-                 Object.keys(selectedReport.detailed_reasoning.metric_explanations).length > 0 && (
-                  <Card className="bg-[#1b263b]/80 border border-blue-500">
-                    <CardHeader>
-                      <CardTitle className="text-blue-400">Metric Explanations</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {Object.entries(selectedReport.detailed_reasoning.metric_explanations).map(([metric, explanation]) => (
-                          <div key={metric} className="border-b border-gray-700 pb-2">
-                            <div className="font-semibold text-white mb-1">{metric}</div>
-                            <div className="text-sm text-gray-300">{explanation}</div>
-                          </div>
-                        ))}
+                      <div className="h-96 w-full bg-gray-900 rounded-md overflow-hidden">
+                        <iframe 
+                          src={selectedReport.pdf_url} 
+                          className="w-full h-full"
+                          title={`PDF Preview: ${selectedReport.model_name}`}
+                        />
                       </div>
+                      <Button 
+                        onClick={() => downloadPDF(selectedReport)}
+                        className="mt-4 bg-green-600 hover:bg-green-700"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Full PDF
+                      </Button>
                     </CardContent>
                   </Card>
                 )}
 
                 {/* Actions */}
                 <div className="flex gap-4">
-                  {selectedReport.pdf_url && (
-                    <Button 
-                      onClick={() => downloadPDF(selectedReport)}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download PDF Report
-                    </Button>
-                  )}
                   <Button 
-                    variant="outline" 
-                    onClick={() => setSelectedReport(null)}
+                    onClick={() => {
+                      setSelectedReport(null);
+                      setActiveTab("overview");
+                    }}
                     className="border-gray-500 text-gray-300 hover:bg-gray-700"
                   >
                     Back to Overview
@@ -441,4 +369,4 @@ const RegistryDashboard: React.FC<RegistryDashboardProps> = ({ user }) => {
   );
 };
 
-export default RegistryDashboard; 
+export default RegistryDashboard;
