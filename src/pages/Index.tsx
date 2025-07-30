@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import HeroSection from "@/components/HeroSection";
 import FeaturesSection from "@/components/FeaturesSection";
 import DemoSection from "@/components/DemoSection";
@@ -7,7 +9,20 @@ import GitHubSection from "@/components/GitHubSection";
 import AboutSection from "@/components/AboutSection";
 import FooterSection from "@/components/FooterSection";
 import SectionDivider from "@/components/SectionDivider";
+
 const Index = () => {
+  const navigate = useNavigate();
+
+  // Check if user is logged in and redirect if necessary
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const token = localStorage.getItem("token");
+    const isLoggedIn = user && (user.id || user.email) && token;
+
+    if (isLoggedIn) {
+      navigate("/home");
+    }
+  }, [navigate]);
   return (
     <div className="relative min-h-screen font-inter overflow-x-hidden text-white">
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import RegistryDashboard from "@/components/RegistryDashboard";
 import { ClipboardCopy } from "lucide-react";
@@ -12,15 +12,7 @@ export default function Dashboard() {
     const token = localStorage.getItem("token");
 
     if (!userDataString || !token) {
-      const mockUser = {
-        id: "test-user-id",
-        name: "Test User",
-        email: "test@example.com",
-        company: "Test Company",
-      };
-      localStorage.setItem("user", JSON.stringify(mockUser));
-      localStorage.setItem("token", "mock-token-for-testing");
-      return mockUser;
+      return null;
     } else {
       const userData = JSON.parse(userDataString);
       return {
@@ -36,6 +28,10 @@ export default function Dashboard() {
   const [apiKey, setApiKey] = useState("********--NOT_GENERATED--********");
   const [loadingKey, setLoadingKey] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'registry'>('dashboard');
+  
+  // Inactivity timeout functionality
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
 
   const handleGenerateApiKey = async () => {
     const token = localStorage.getItem("token");
@@ -75,15 +71,51 @@ export default function Dashboard() {
     toast.success("API Key copied to clipboard!");
   };
 
-  if (!user.id) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Loading Dashboard...</h1>
-          <p className="text-gray-400">User data is being initialized</p>
-        </div>
-      </div>
-    );
+  // Reset inactivity timer
+  const resetInactivityTimer = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      toast.error("Session expired due to inactivity. Please log in again.");
+      handleLogout();
+    }, INACTIVITY_TIMEOUT);
+  };
+
+  // Handle user activity
+  const handleUserActivity = () => {
+    resetInactivityTimer();
+  };
+
+  // Set up inactivity monitoring
+  useEffect(() => {
+    if (!user) {
+      navigate("/");
+      return;
+    }
+
+    // Start inactivity timer
+    resetInactivityTimer();
+
+    // Add event listeners for user activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserActivity, true);
+    });
+
+    // Cleanup function
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserActivity, true);
+      });
+    };
+  }, [user]);
+
+  if (!user) {
+    return null; // Will redirect in useEffect
   }
 
   return (
@@ -106,52 +138,50 @@ export default function Dashboard() {
       <div className="relative z-20">
         <Toaster position="top-right" reverseOrder={false} />
 
-        {/* 🔷 Top Navbar */}
-        <nav className="w-full bg-white/5 backdrop-blur-md shadow-lg shadow-cyan-500/10 py-4 px-8 flex justify-between items-center border-b border-cyan-400/20">
-          <h1 className="text-xl font-bold text-cyan-400 drop-shadow-[0_0_5px_rgba(0,255,255,0.4)]">
-            FAIRSIGHT
-          </h1>
-          <div className="space-x-6 flex items-center">
-            <button
-              onClick={() => navigate("/")}
-              className="text-gray-300 hover:text-cyan-400 transition-colors duration-300"
-            >
-              Home
-            </button>
-            <button
-              onClick={() => setActiveTab("dashboard")}
-              className={`transition-colors duration-300 ${
-                activeTab === "dashboard"
-                  ? "text-cyan-400 border-b-2 border-cyan-400"
-                  : "text-gray-300 hover:text-cyan-400"
-              }`}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => setActiveTab("registry")}
-              className={`transition-colors duration-300 ${
-                activeTab === "registry"
-                  ? "text-cyan-400 border-b-2 border-cyan-400"
-                  : "text-gray-300 hover:text-cyan-400"
-              }`}
-            >
-              Fairsight Registry
-            </button>
-            <button
-              onClick={() => alert("Plans coming soon!")}
-              className="text-gray-300 hover:text-cyan-400 transition-colors duration-300"
-            >
-              Plans
-            </button>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500/80 text-white px-4 py-2 rounded-md hover:bg-red-500 hover:shadow-lg hover:shadow-red-500/40 transition-all duration-300"
-            >
-              Logout
-            </button>
-          </div>
-        </nav>
+                 {/* 🔷 Top Navbar */}
+         <nav className="w-full bg-white/5 backdrop-blur-md shadow-lg shadow-cyan-500/10 py-4 px-8 flex justify-between items-center border-b border-cyan-400/20">
+           <h1 className="text-xl font-bold text-cyan-400 drop-shadow-[0_0_5px_rgba(0,255,255,0.4)]">
+             FAIRSIGHT
+           </h1>
+           <div className="space-x-6 flex items-center">
+             <button
+               onClick={() => navigate("/home")}
+               className="text-gray-300 hover:text-cyan-400 transition-colors duration-300"
+             >
+               Home
+             </button>
+             <button
+               onClick={() => navigate("/dashboard")}
+               className="text-cyan-400 border-b-2 border-cyan-400 transition-colors duration-300"
+             >
+               Dashboard
+             </button>
+             <button
+               onClick={() => navigate("/fairsight")}
+               className="text-gray-300 hover:text-cyan-400 transition-colors duration-300"
+             >
+               Fairsight
+             </button>
+             <button
+               onClick={() => setActiveTab("registry")}
+               className="text-gray-300 hover:text-cyan-400 transition-colors duration-300"
+             >
+               Fairsight Registry
+             </button>
+             <button
+               onClick={() => alert("Plans coming soon!")}
+               className="text-gray-300 hover:text-cyan-400 transition-colors duration-300"
+             >
+               Plans
+             </button>
+             <button
+               onClick={handleLogout}
+               className="bg-red-500/80 text-white px-4 py-2 rounded-md hover:bg-red-500 hover:shadow-lg hover:shadow-red-500/40 transition-all duration-300"
+             >
+               Logout
+             </button>
+           </div>
+         </nav>
 
         {/* 🔽 Main Section */}
         {activeTab === "dashboard" ? (

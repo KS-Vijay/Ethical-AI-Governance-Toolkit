@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import FairsightPage from "./pages/FairsightPage";
+import HomeLoggedIn from "./pages/HomeLoggedIn";
 
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
         <RouteWithVideo>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/home" element={<HomeLoggedIn />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />

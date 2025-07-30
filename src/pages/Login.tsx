@@ -36,7 +36,7 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       setMessage("✅ Login successful! Redirecting...");
-      setTimeout(() => navigate("/dashboard"), 1000);
+      setTimeout(() => navigate("/home"), 1000);
     } catch (error) {
       console.error("Login error:", error);
       setMessage("Something went wrong.");
